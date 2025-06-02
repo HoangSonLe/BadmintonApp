@@ -599,6 +599,32 @@ const RegistrationList: React.FC<RegistrationListProps> = ({
                         <Row gutter={[8, 8]}>
                           <Col span={12}>
                             <Statistic
+                              title="Tổng số người"
+                              value={summary.totalPlayers}
+                              prefix={<UserOutlined />}
+                              suffix="người"
+                              valueStyle={{ fontSize: '16px' }}
+                            />
+                          </Col>
+                          <Col span={12}>
+                            <Statistic
+                              title="Sân mặc định"
+                              value={registration.settings.courtsCount}
+                              prefix={<HomeOutlined />}
+                              suffix="sân"
+                              valueStyle={{ fontSize: '16px', color: '#0ea5e9' }}
+                            />
+                            <div style={{
+                              fontSize: '11px',
+                              color: '#666',
+                              marginTop: '2px',
+                              textAlign: 'center'
+                            }}>
+                              Sức chứa: {registration.settings.courtsCount * registration.settings.playersPerCourt} người
+                            </div>
+                          </Col>
+                          <Col span={12}>
+                            <Statistic
                               title="Số sân cần thiết"
                               value={summary.requiredCourts}
                               prefix={<HomeOutlined />}
@@ -639,9 +665,32 @@ const RegistrationList: React.FC<RegistrationListProps> = ({
 
                           {summary.extraCourts === 0 && (
                             <Col span={24}>
-                              <Tag color="success" className="mt-2">
-                                ✅ Không cần thuê thêm sân
-                              </Tag>
+                              <div style={{
+                                backgroundColor: '#f6ffed',
+                                border: '1px solid #52c41a',
+                                borderRadius: '6px',
+                                padding: '8px',
+                                marginTop: '8px'
+                              }}>
+                                <div style={{
+                                  color: '#52c41a',
+                                  fontWeight: 'bold',
+                                  marginBottom: '4px'
+                                }}>
+                                  ✅ Không cần thuê thêm sân
+                                </div>
+                                <div style={{
+                                  fontSize: '12px',
+                                  color: '#666',
+                                  display: 'flex',
+                                  gap: '12px',
+                                  flexWrap: 'wrap'
+                                }}>
+                                  <span>Sân mặc định: {registration.settings.courtsCount} sân</span>
+                                  <span>Sức chứa: {registration.settings.courtsCount * registration.settings.playersPerCourt} người</span>
+                                  <span>Đã đăng ký: {summary.totalPlayers} người</span>
+                                </div>
+                              </div>
                             </Col>
                           )}
                         </Row>

@@ -12,11 +12,13 @@ const { Title } = Typography;
 
 interface WeeklyRegistrationProps {
   settings: AppSettings;
+  registrations: WeeklyRegistrationType[];
   onRegistrationSubmit: (registration: WeeklyRegistrationType) => void;
 }
 
 const WeeklyRegistration: React.FC<WeeklyRegistrationProps> = ({
   settings,
+  registrations,
   onRegistrationSubmit
 }) => {
   const [playerName, setPlayerName] = useState<string>('');
@@ -33,9 +35,22 @@ const WeeklyRegistration: React.FC<WeeklyRegistrationProps> = ({
     return { start: start.toDate(), end: end.toDate() };
   };
 
-  // Tính toán thông tin phí khi số người thay đổi
+  // Tìm đăng ký hiện có cho tuần tiếp theo
+  const existingRegistration = useMemo(() => {
+    const { start, end } = getWeekDates(nextWeek);
+    return registrations.find(reg => {
+      const regStart = new Date(reg.weekStart);
+      const regEnd = new Date(reg.weekEnd);
+      return regStart.getTime() === start.getTime() && regEnd.getTime() === end.getTime();
+    }) || null;
+  }, [registrations, nextWeek]);
+
+  // Tính toán thông tin phí khi số người thay đổi (bao gồm cả người đã đăng ký trước đó)
   const registrationSummary = useMemo(() => {
-    const totalPlayers = players.length;
+    const existingPlayersCount = existingRegistration ? existingRegistration.players.length : 0;
+    const newPlayersCount = players.length;
+    const totalPlayers = existingPlayersCount + newPlayersCount;
+
     const maxPlayersWithDefaultCourts = settings.courtsCount * settings.playersPerCourt;
     const extraPlayersCount = Math.max(0, totalPlayers - maxPlayersWithDefaultCourts);
     const extraCourts = Math.ceil(extraPlayersCount / settings.playersPerCourt);
@@ -45,13 +60,15 @@ const WeeklyRegistration: React.FC<WeeklyRegistrationProps> = ({
 
     return {
       totalPlayers,
+      existingPlayersCount,
+      newPlayersCount,
       requiredCourts,
       extraCourts,
       extraPlayersCount,
       totalExtraFee,
       feePerExtraPlayer
     };
-  }, [players.length, settings]);
+  }, [players.length, settings, existingRegistration]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('vi-VN', {
@@ -155,6 +172,24 @@ const WeeklyRegistration: React.FC<WeeklyRegistrationProps> = ({
           </CustomLabel>
           <Alert
             message={`Đăng ký cho tuần: ${formatDate(nextWeek)} - ${formatDate(nextWeek.endOf('week').add(1, 'day'))}`}
+            description={
+              <div style={{ marginTop: '8px', fontSize: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <HomeOutlined style={{ color: '#1890ff' }} />
+                    <span><strong>Sân mặc định:</strong> {settings.courtsCount} sân</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <UserOutlined style={{ color: '#1890ff' }} />
+                    <span><strong>Sức chứa:</strong> {settings.courtsCount * settings.playersPerCourt} người ({settings.playersPerCourt} người/sân)</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <DollarOutlined style={{ color: '#1890ff' }} />
+                    <span><strong>Phí thuê thêm sân:</strong> {formatCurrency(settings.extraCourtFee)}/sân</span>
+                  </div>
+                </div>
+              </div>
+            }
             type="info"
             showIcon
             style={{
@@ -167,9 +202,54 @@ const WeeklyRegistration: React.FC<WeeklyRegistrationProps> = ({
           />
         </div>
 
+        {/* Hiển thị thông tin người đã đăng ký trước đó */}
+        {existingRegistration && (
+          <div>
+            <CustomLabel icon={<UserOutlined />}>
+              Người đã đăng ký cho tuần này
+            </CustomLabel>
+            <Alert
+              message={`Đã có ${existingRegistration.players.length} người đăng ký cho tuần này`}
+              description={
+                <div style={{ marginTop: '8px' }}>
+                  <p style={{ marginBottom: '8px', fontWeight: 'bold' }}>Danh sách đã đăng ký:</p>
+                  <div style={{
+                    maxHeight: '120px',
+                    overflowY: 'auto',
+                    backgroundColor: '#f9f9f9',
+                    padding: '8px',
+                    borderRadius: '6px'
+                  }}>
+                    {existingRegistration.players.map((existingPlayer, index) => (
+                      <div key={existingPlayer.id} style={{
+                        padding: '4px 0',
+                        borderBottom: index < existingRegistration.players.length - 1 ? '1px solid #e8e8e8' : 'none',
+                        fontSize: '13px'
+                      }}>
+                        <span style={{ fontWeight: 'bold' }}>{index + 1}. {existingPlayer.name}</span>
+                        <span style={{ color: '#666', marginLeft: '8px', fontSize: '12px' }}>
+                          ({formatTime(existingPlayer.registeredAt)})
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              }
+              type="info"
+              showIcon
+              style={{
+                background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
+                border: '2px solid #0ea5e9',
+                borderRadius: '12px',
+                marginBottom: '16px'
+              }}
+            />
+          </div>
+        )}
+
         <div>
           <CustomLabel icon={<UserOutlined />}>
-            Thêm người chơi
+            Thêm người chơi mới
           </CustomLabel>
           <Space.Compact style={{ width: '100%' }}>
             <Input
@@ -239,8 +319,10 @@ const WeeklyRegistration: React.FC<WeeklyRegistrationProps> = ({
               renderItem={(player) => {
                 // Tìm index gốc trong danh sách chưa sắp xếp
                 const originalIndex = players.findIndex(p => p.id === player.id);
+                // Tính vị trí thực tế trong tổng danh sách (bao gồm người đã đăng ký trước đó)
+                const totalIndex = registrationSummary.existingPlayersCount + originalIndex;
                 const maxPlayersWithDefaultCourts = settings.courtsCount * settings.playersPerCourt;
-                const isExtraPlayer = originalIndex >= maxPlayersWithDefaultCourts;
+                const isExtraPlayer = totalIndex >= maxPlayersWithDefaultCourts;
 
                 return (
                   <List.Item style={{
@@ -262,7 +344,7 @@ const WeeklyRegistration: React.FC<WeeklyRegistrationProps> = ({
                           marginBottom: '2px',
                           color: isExtraPlayer ? '#d4380d' : 'inherit'
                         }}>
-                          {originalIndex + 1}. {player.name}
+                          {totalIndex + 1}. {player.name}
                           {isExtraPlayer && (
                             <span style={{
                               marginLeft: '8px',
@@ -327,7 +409,14 @@ const WeeklyRegistration: React.FC<WeeklyRegistrationProps> = ({
                 message="⚠️ Cần thuê thêm sân"
                 description={
                   <div style={{ marginTop: '8px' }}>
-                    <p><strong>Số người đăng ký:</strong> {registrationSummary.totalPlayers} người</p>
+                    <p><strong>Tổng số người đăng ký:</strong> {registrationSummary.totalPlayers} người</p>
+                    {registrationSummary.existingPlayersCount > 0 && (
+                      <p><strong>• Đã đăng ký trước:</strong> {registrationSummary.existingPlayersCount} người</p>
+                    )}
+                    {registrationSummary.newPlayersCount > 0 && (
+                      <p><strong>• Đăng ký mới:</strong> {registrationSummary.newPlayersCount} người</p>
+                    )}
+                    <p><strong>Sân mặc định có sẵn:</strong> {settings.courtsCount} sân (sức chứa {settings.courtsCount * settings.playersPerCourt} người)</p>
                     <p><strong>Sân cần thiết:</strong> {registrationSummary.requiredCourts} sân (gồm {settings.courtsCount} sân mặc định + {registrationSummary.extraCourts} sân thêm)</p>
                     <p><strong>Số người vượt quá:</strong> {registrationSummary.extraPlayersCount} người</p>
                     <p style={{ color: '#f5222d', fontWeight: 'bold', fontSize: '16px', marginTop: '12px' }}>
@@ -351,9 +440,16 @@ const WeeklyRegistration: React.FC<WeeklyRegistrationProps> = ({
                 message="✅ Không cần thuê thêm sân"
                 description={
                   <div style={{ marginTop: '8px' }}>
-                    <p><strong>Số người đăng ký:</strong> {registrationSummary.totalPlayers} người</p>
+                    <p><strong>Tổng số người đăng ký:</strong> {registrationSummary.totalPlayers} người</p>
+                    {registrationSummary.existingPlayersCount > 0 && (
+                      <p><strong>• Đã đăng ký trước:</strong> {registrationSummary.existingPlayersCount} người</p>
+                    )}
+                    {registrationSummary.newPlayersCount > 0 && (
+                      <p><strong>• Đăng ký mới:</strong> {registrationSummary.newPlayersCount} người</p>
+                    )}
+                    <p><strong>Sân mặc định có sẵn:</strong> {settings.courtsCount} sân (sức chứa {settings.courtsCount * settings.playersPerCourt} người)</p>
                     <p><strong>Sân cần thiết:</strong> {registrationSummary.requiredCourts} sân</p>
-                    <p style={{ color: '#52c41a', fontWeight: 'bold' }}>Số người vừa đủ với {settings.courtsCount} sân hiện có!</p>
+                    <p style={{ color: '#52c41a', fontWeight: 'bold' }}>✅ Số người vừa đủ với {settings.courtsCount} sân mặc định có sẵn!</p>
                   </div>
                 }
                 type="success"
@@ -375,7 +471,10 @@ const WeeklyRegistration: React.FC<WeeklyRegistrationProps> = ({
           onClick={handleSubmit}
           disabled={players.length === 0}
         >
-          Đăng ký tuần tiếp theo ({players.length} người)
+          {existingRegistration
+            ? `Thêm vào đăng ký (${players.length} người mới, tổng ${registrationSummary.totalPlayers} người)`
+            : `Đăng ký tuần tiếp theo (${players.length} người)`
+          }
         </Button>
       </Space>
     </Card>

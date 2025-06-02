@@ -29,4 +29,9 @@ export interface RegistrationSummary {
   extraPlayersCount: number;
   totalExtraFee: number;
   feePerExtraPlayer: number;
+  weekInfo?: {
+    weekStart: Date;
+    weekEnd: Date;
+    registrationId: string;
+  } | null;
 }
