@@ -25,34 +25,38 @@ function App() {
 
   // Initialize database and load data on component mount
   useEffect(() => {
-    try {
-      // Initialize database
-      DatabaseService.initializeDatabase();
+    const initializeApp = async () => {
+      try {
+        // Initialize database
+        await DatabaseService.initializeDatabase();
 
-      // Load data from JSON database
-      const dbSettings = DatabaseService.getSettings();
-      const dbRegistrations = DatabaseService.getRegistrations();
+        // Load data from Firestore database
+        const dbSettings = await DatabaseService.getSettings();
+        const dbRegistrations = await DatabaseService.getRegistrations();
 
-      setSettings(dbSettings);
-      setRegistrations(dbRegistrations);
+        setSettings(dbSettings);
+        setRegistrations(dbRegistrations);
 
-      // Show welcome message
-      const stats = DatabaseService.getStats();
-      message.success({
-        content: `Đã tải database JSON! ${stats.totalRegistrations} đăng ký, ${stats.totalPlayers} người chơi.`,
-        duration: 4,
-      });
-    } catch (error) {
-      message.error('Lỗi khi tải database: ' + (error as Error).message);
-    }
+        // Show welcome message
+        const stats = await DatabaseService.getStats();
+        message.success({
+          content: `Đã tải database Firestore! ${stats.totalRegistrations} đăng ký, ${stats.totalPlayers} người chơi.`,
+          duration: 4,
+        });
+      } catch (error) {
+        message.error('Lỗi khi tải database: ' + (error as Error).message);
+      }
+    };
+
+    initializeApp();
   }, []);
 
   // Handle settings change
-  const handleSettingsChange = (newSettings: AppSettings) => {
+  const handleSettingsChange = async (newSettings: AppSettings) => {
     try {
       setSettings(newSettings);
-      DatabaseService.updateSettings(newSettings);
-      message.success('Cài đặt đã được lưu vào database JSON!');
+      await DatabaseService.updateSettings(newSettings);
+      message.success('Cài đặt đã được lưu vào database Firestore!');
     } catch (error) {
       message.error('Lỗi khi lưu cài đặt: ' + (error as Error).message);
     }
@@ -79,10 +83,10 @@ function App() {
   };
 
   // Handle new registration submission
-  const handleRegistrationSubmit = (registration: WeeklyRegistrationType) => {
+  const handleRegistrationSubmit = async (registration: WeeklyRegistrationType) => {
     try {
       // Save to database
-      DatabaseService.addRegistration(registration);
+      await DatabaseService.addRegistration(registration);
 
       // Update local state
       const newRegistrations = [...registrations, registration];
@@ -92,34 +96,38 @@ function App() {
       const summary = calculateSummary(registration);
       setCurrentSummary(summary);
 
-      message.success('Đăng ký đã được lưu vào database JSON!');
+      message.success('Đăng ký đã được lưu vào database Firestore!');
     } catch (error) {
       message.error('Lỗi khi lưu đăng ký: ' + (error as Error).message);
     }
   };
 
   // Handle registration deletion
-  const handleDeleteRegistration = (id: string) => {
+  const handleDeleteRegistration = async (id: string) => {
     try {
-      DatabaseService.deleteRegistration(id);
+      await DatabaseService.deleteRegistration(id);
       const newRegistrations = registrations.filter(reg => reg.id !== id);
       setRegistrations(newRegistrations);
-      message.success('Đã xóa đăng ký khỏi database JSON!');
+      message.success('Đã xóa đăng ký khỏi database Firestore!');
     } catch (error) {
       message.error('Lỗi khi xóa đăng ký: ' + (error as Error).message);
     }
   };
 
   // Handle data import from JSON file
-  const handleDataImport = (newSettings: AppSettings, newRegistrations: WeeklyRegistrationType[]) => {
+  const handleDataImport = async (newSettings: AppSettings, newRegistrations: WeeklyRegistrationType[]) => {
     try {
       // Update database
-      DatabaseService.updateSettings(newSettings);
+      await DatabaseService.updateSettings(newSettings);
 
       // Clear existing registrations and add new ones
-      const currentRegistrations = DatabaseService.getRegistrations();
-      currentRegistrations.forEach(reg => DatabaseService.deleteRegistration(reg.id));
-      newRegistrations.forEach(reg => DatabaseService.addRegistration(reg));
+      const currentRegistrations = await DatabaseService.getRegistrations();
+      for (const reg of currentRegistrations) {
+        await DatabaseService.deleteRegistration(reg.id);
+      }
+      for (const reg of newRegistrations) {
+        await DatabaseService.addRegistration(reg);
+      }
 
       // Update local state
       setSettings(newSettings);
@@ -128,7 +136,7 @@ function App() {
       // Clear current summary
       setCurrentSummary(null);
 
-      message.success('Đã nhập dữ liệu vào database JSON!');
+      message.success('Đã nhập dữ liệu vào database Firestore!');
     } catch (error) {
       message.error('Lỗi khi nhập dữ liệu: ' + (error as Error).message);
     }

@@ -1,4 +1,5 @@
 import type { AppSettings, WeeklyRegistration } from '../types';
+import { FirestoreService } from './firestoreService';
 
 // Database structure interface
 export interface DatabaseSchema {
@@ -34,17 +35,36 @@ const DEFAULT_DATABASE: DatabaseSchema = {
 };
 
 /**
- * Database Service - Giả lập database JSON
+ * Database Service - Sử dụng Cloud Firestore với fallback localStorage
  */
 export class DatabaseService {
-  
+
+  // Flag để tạm thời disable Firestore (set true để chỉ dùng localStorage)
+  private static readonly DISABLE_FIRESTORE = !import.meta.env.VITE_FIREBASE_API_KEY;
+
   /**
    * Khởi tạo database nếu chưa tồn tại
    */
-  static initializeDatabase(): void {
-    const existingDb = localStorage.getItem(DB_KEY);
-    if (!existingDb) {
-      localStorage.setItem(DB_KEY, JSON.stringify(DEFAULT_DATABASE));
+  static async initializeDatabase(): Promise<void> {
+    if (this.DISABLE_FIRESTORE) {
+      console.log('🔄 Firestore disabled, using localStorage only');
+      const existingDb = localStorage.getItem(DB_KEY);
+      if (!existingDb) {
+        localStorage.setItem(DB_KEY, JSON.stringify(DEFAULT_DATABASE));
+      }
+      return;
+    }
+
+    try {
+      await FirestoreService.initializeDatabase();
+      console.log('🔥 Firestore initialized successfully');
+    } catch (error) {
+      console.error('⚠️ Error initializing Firestore, falling back to localStorage:', error);
+      // Fallback to localStorage if Firestore fails
+      const existingDb = localStorage.getItem(DB_KEY);
+      if (!existingDb) {
+        localStorage.setItem(DB_KEY, JSON.stringify(DEFAULT_DATABASE));
+      }
     }
   }
 
@@ -102,44 +122,81 @@ export class DatabaseService {
   /**
    * Lấy settings
    */
-  static getSettings(): AppSettings {
-    const db = this.readDatabase();
-    return db.settings;
+  static async getSettings(): Promise<AppSettings> {
+    if (this.DISABLE_FIRESTORE) {
+      const db = this.readDatabase();
+      return db.settings;
+    }
+
+    try {
+      return await FirestoreService.getSettings();
+    } catch (error) {
+      console.error('Error getting settings from Firestore, falling back to localStorage:', error);
+      const db = this.readDatabase();
+      return db.settings;
+    }
   }
 
   /**
    * Cập nhật settings
    */
-  static updateSettings(newSettings: AppSettings): void {
-    const db = this.readDatabase();
-    db.settings = newSettings;
-    this.writeDatabase(db);
+  static async updateSettings(newSettings: AppSettings): Promise<void> {
+    if (this.DISABLE_FIRESTORE) {
+      const db = this.readDatabase();
+      db.settings = newSettings;
+      this.writeDatabase(db);
+      return;
+    }
+
+    try {
+      await FirestoreService.updateSettings(newSettings);
+    } catch (error) {
+      console.error('Error updating settings in Firestore, falling back to localStorage:', error);
+      const db = this.readDatabase();
+      db.settings = newSettings;
+      this.writeDatabase(db);
+    }
   }
 
   /**
    * Lấy tất cả registrations
    */
-  static getRegistrations(): WeeklyRegistration[] {
-    const db = this.readDatabase();
-    return db.registrations;
+  static async getRegistrations(): Promise<WeeklyRegistration[]> {
+    try {
+      return await FirestoreService.getRegistrations();
+    } catch (error) {
+      console.error('Error getting registrations from Firestore, falling back to localStorage:', error);
+      const db = this.readDatabase();
+      return db.registrations;
+    }
   }
 
   /**
    * Thêm registration mới
    */
-  static addRegistration(registration: WeeklyRegistration): void {
-    const db = this.readDatabase();
-    db.registrations.push(registration);
-    this.writeDatabase(db);
+  static async addRegistration(registration: WeeklyRegistration): Promise<void> {
+    try {
+      await FirestoreService.addRegistration(registration);
+    } catch (error) {
+      console.error('Error adding registration to Firestore, falling back to localStorage:', error);
+      const db = this.readDatabase();
+      db.registrations.push(registration);
+      this.writeDatabase(db);
+    }
   }
 
   /**
    * Xóa registration theo ID
    */
-  static deleteRegistration(id: string): void {
-    const db = this.readDatabase();
-    db.registrations = db.registrations.filter(reg => reg.id !== id);
-    this.writeDatabase(db);
+  static async deleteRegistration(id: string): Promise<void> {
+    try {
+      await FirestoreService.deleteRegistration(id);
+    } catch (error) {
+      console.error('Error deleting registration from Firestore, falling back to localStorage:', error);
+      const db = this.readDatabase();
+      db.registrations = db.registrations.filter(reg => reg.id !== id);
+      this.writeDatabase(db);
+    }
   }
 
   /**
@@ -165,9 +222,14 @@ export class DatabaseService {
   /**
    * Lấy metadata
    */
-  static getMetadata() {
-    const db = this.readDatabase();
-    return db.metadata;
+  static async getMetadata(): Promise<any> {
+    try {
+      return await FirestoreService.getMetadata();
+    } catch (error) {
+      console.error('Error getting metadata from Firestore, falling back to localStorage:', error);
+      const db = this.readDatabase();
+      return db.metadata;
+    }
   }
 
   /**
@@ -225,14 +287,19 @@ export class DatabaseService {
   /**
    * Reset database về trạng thái mặc định
    */
-  static resetDatabase(): void {
-    localStorage.setItem(DB_KEY, JSON.stringify(DEFAULT_DATABASE));
+  static async resetDatabase(): Promise<void> {
+    try {
+      await FirestoreService.resetDatabase();
+    } catch (error) {
+      console.error('Error resetting Firestore database, falling back to localStorage:', error);
+      localStorage.setItem(DB_KEY, JSON.stringify(DEFAULT_DATABASE));
+    }
   }
 
   /**
    * Tạo dữ liệu mock để demo
    */
-  static createMockData(): void {
+  static async createMockData(): Promise<void> {
     const mockRegistrations: WeeklyRegistration[] = [
       // Tuần 1 - Tuần này
       {
@@ -340,24 +407,29 @@ export class DatabaseService {
     ];
 
     // Reset database và thêm mock data
-    this.resetDatabase();
+    await this.resetDatabase();
 
     // Thêm từng registration
-    mockRegistrations.forEach(registration => {
-      this.addRegistration(registration);
-    });
+    for (const registration of mockRegistrations) {
+      await this.addRegistration(registration);
+    }
   }
 
   /**
    * Lấy thống kê database
    */
-  static getStats() {
-    const db = this.readDatabase();
-    return {
-      totalRegistrations: db.registrations.length,
-      totalPlayers: db.registrations.reduce((total, reg) => total + reg.players.length, 0),
-      lastUpdated: db.metadata.lastUpdated,
-      databaseSize: JSON.stringify(db).length
-    };
+  static async getStats(): Promise<any> {
+    try {
+      return await FirestoreService.getStats();
+    } catch (error) {
+      console.error('Error getting stats from Firestore, falling back to localStorage:', error);
+      const db = this.readDatabase();
+      return {
+        totalRegistrations: db.registrations.length,
+        totalPlayers: db.registrations.reduce((total, reg) => total + reg.players.length, 0),
+        lastUpdated: db.metadata.lastUpdated,
+        databaseSize: JSON.stringify(db).length
+      };
+    }
   }
 }

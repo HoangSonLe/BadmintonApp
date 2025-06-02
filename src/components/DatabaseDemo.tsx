@@ -8,19 +8,28 @@ const { Title, Text, Paragraph } = Typography;
 
 const DatabaseDemo: React.FC = () => {
   const [stats, setStats] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
 
-  const refreshStats = () => {
-    const dbStats = DatabaseService.getStats();
-    const metadata = DatabaseService.getMetadata();
-    setStats({ ...dbStats, ...metadata });
+  const refreshStats = async () => {
+    try {
+      setLoading(true);
+      const dbStats = await DatabaseService.getStats();
+      const metadata = await DatabaseService.getMetadata();
+      setStats({ ...dbStats, ...metadata });
+    } catch (error) {
+      console.error('Error refreshing stats:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     refreshStats();
   }, []);
 
-  const createSampleData = () => {
+  const createSampleData = async () => {
     try {
+      setLoading(true);
       // Create sample registration
       const sampleRegistration: WeeklyRegistration = {
         id: Date.now().toString(),
@@ -50,26 +59,26 @@ const DatabaseDemo: React.FC = () => {
         }
       };
 
-      DatabaseService.addRegistration(sampleRegistration);
-      refreshStats();
+      await DatabaseService.addRegistration(sampleRegistration);
+      await refreshStats();
       message.success('Đã tạo dữ liệu mẫu thành công!');
     } catch (error) {
       message.error('Lỗi khi tạo dữ liệu mẫu: ' + (error as Error).message);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const createMockData = () => {
+  const createMockData = async () => {
     try {
-      DatabaseService.createMockData();
-      refreshStats();
+      setLoading(true);
+      await DatabaseService.createMockData();
+      await refreshStats();
       message.success('Đã tạo 5 tuần dữ liệu mock với 38 người chơi!');
-
-      // Reload trang để cập nhật UI
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
     } catch (error) {
       message.error('Lỗi khi tạo mock data: ' + (error as Error).message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -113,6 +122,8 @@ const DatabaseDemo: React.FC = () => {
               icon={<PlayCircleOutlined />}
               onClick={createMockData}
               size="large"
+              loading={loading}
+              disabled={loading}
             >
               🎯 Tạo Mock Data (5 tuần)
             </Button>
@@ -120,12 +131,16 @@ const DatabaseDemo: React.FC = () => {
             <Button
               icon={<PlayCircleOutlined />}
               onClick={createSampleData}
+              loading={loading}
+              disabled={loading}
             >
               Tạo 1 đăng ký mẫu
             </Button>
 
             <Button
               onClick={refreshStats}
+              loading={loading}
+              disabled={loading}
             >
               Refresh thống kê
             </Button>
@@ -135,17 +150,27 @@ const DatabaseDemo: React.FC = () => {
                 DatabaseService.exportToFile();
                 message.success('Đã xuất database!');
               }}
+              disabled={loading}
             >
               Xuất Database
             </Button>
 
             <Button
               danger
-              onClick={() => {
-                DatabaseService.resetDatabase();
-                refreshStats();
-                message.success('Đã reset database!');
+              onClick={async () => {
+                try {
+                  setLoading(true);
+                  await DatabaseService.resetDatabase();
+                  await refreshStats();
+                  message.success('Đã reset database!');
+                } catch (error) {
+                  message.error('Lỗi khi reset database: ' + (error as Error).message);
+                } finally {
+                  setLoading(false);
+                }
               }}
+              loading={loading}
+              disabled={loading}
             >
               Reset Database
             </Button>

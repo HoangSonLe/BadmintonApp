@@ -38,6 +38,29 @@ const DataManager: React.FC<DataManagerProps> = ({
   onDataImport
 }) => {
   const [uploading, setUploading] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [dbStats, setDbStats] = useState<any>(null);
+  const [metadata, setMetadata] = useState<any>(null);
+
+  // Load database stats
+  const loadStats = async () => {
+    try {
+      setLoading(true);
+      const stats = await DatabaseService.getStats();
+      const meta = await DatabaseService.getMetadata();
+      setDbStats(stats);
+      setMetadata(meta);
+    } catch (error) {
+      console.error('Error loading stats:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load stats on component mount
+  React.useEffect(() => {
+    loadStats();
+  }, []);
 
   // Handle data export
   const handleExport = () => {
@@ -68,8 +91,8 @@ const DataManager: React.FC<DataManagerProps> = ({
       await DatabaseService.importFromFile(file.originFileObj);
 
       // Reload data from database
-      const newSettings = DatabaseService.getSettings();
-      const newRegistrations = DatabaseService.getRegistrations();
+      const newSettings = await DatabaseService.getSettings();
+      const newRegistrations = await DatabaseService.getRegistrations();
 
       // Show confirmation dialog
       confirm({
@@ -106,15 +129,27 @@ const DataManager: React.FC<DataManagerProps> = ({
     return false; // Prevent default upload behavior
   };
 
-  // Get database stats
-  const dbStats = DatabaseService.getStats();
-  const metadata = DatabaseService.getMetadata();
+  if (loading || !dbStats || !metadata) {
+    return (
+      <Card title={
+        <Space>
+          <DatabaseOutlined />
+          <span>Quản lý Database Firestore</span>
+        </Space>
+      }>
+        <div style={{ textAlign: 'center', padding: '50px' }}>
+          <ReloadOutlined spin style={{ fontSize: '24px' }} />
+          <div style={{ marginTop: '16px' }}>Đang tải dữ liệu từ Firestore...</div>
+        </div>
+      </Card>
+    );
+  }
 
   return (
     <Card title={
       <Space>
         <DatabaseOutlined />
-        <span>Quản lý Database JSON</span>
+        <span>Quản lý Database Firestore</span>
       </Space>
     }>
       <Space direction="vertical" size="large" style={{ width: '100%' }}>
@@ -234,9 +269,10 @@ const DataManager: React.FC<DataManagerProps> = ({
                 confirm({
                   title: 'Xác nhận reset database',
                   content: 'Bạn có chắc chắn muốn reset database về trạng thái mặc định? Tất cả dữ liệu sẽ bị xóa.',
-                  onOk: () => {
-                    DatabaseService.resetDatabase();
-                    window.location.reload();
+                  onOk: async () => {
+                    await DatabaseService.resetDatabase();
+                    await loadStats();
+                    message.success('Database đã được reset!');
                   }
                 });
               }}
@@ -250,14 +286,14 @@ const DataManager: React.FC<DataManagerProps> = ({
 
         {/* Tips */}
         <div>
-          <Title level={4}>💡 Hướng dẫn sử dụng Database JSON</Title>
+          <Title level={4}>💡 Hướng dẫn sử dụng Database Firestore</Title>
           <ul style={{ paddingLeft: '20px' }}>
-            <li><strong>Database ảo:</strong> Dữ liệu được lưu trong localStorage như một database JSON</li>
-            <li><strong>Tự động lưu:</strong> Mỗi thao tác đăng ký/cài đặt sẽ tự động cập nhật database</li>
-            <li><strong>Xuất/Nhập:</strong> Có thể xuất database ra file và nhập lại khi cần</li>
-            <li><strong>Sao lưu:</strong> Nên xuất database thường xuyên để tạo bản sao lưu</li>
-            <li><strong>Chia sẻ:</strong> File JSON có thể chia sẻ với người khác để chuyển dữ liệu</li>
-            <li><strong>Xem nội dung:</strong> File JSON có thể mở bằng notepad để xem chi tiết</li>
+            <li><strong>Cloud Database:</strong> Dữ liệu được lưu trên Cloud Firestore của Google</li>
+            <li><strong>Tự động đồng bộ:</strong> Mỗi thao tác đăng ký/cài đặt sẽ tự động cập nhật trên cloud</li>
+            <li><strong>Truy cập từ xa:</strong> Có thể truy cập dữ liệu từ nhiều thiết bị khác nhau</li>
+            <li><strong>Sao lưu tự động:</strong> Google tự động sao lưu dữ liệu trên cloud</li>
+            <li><strong>Bảo mật:</strong> Dữ liệu được mã hóa và bảo vệ bởi Google</li>
+            <li><strong>Fallback:</strong> Nếu không kết nối được Firestore, sẽ dùng localStorage tạm thời</li>
           </ul>
         </div>
       </Space>
