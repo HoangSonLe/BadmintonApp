@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Card, Form, InputNumber, Button, Typography, message } from 'antd';
-import { SettingOutlined, HomeOutlined, UserOutlined, DollarOutlined, ControlOutlined } from '@ant-design/icons';
+import { HomeOutlined, UserOutlined, DollarOutlined, ControlOutlined } from '@ant-design/icons';
 import type { AppSettings } from '../types';
 import CustomLabel from './CustomLabel';
 
@@ -111,14 +111,14 @@ const Settings: React.FC<SettingsProps> = ({ settings, onSettingsChange }) => {
             { type: 'number', min: 0, message: 'Phí không được âm!' }
           ]}
         >
-          <InputNumber
+          <InputNumber<number>
             min={0}
             step={1000}
             size="large"
             style={{ width: '100%' }}
             placeholder="Nhập phí thuê thêm sân"
             formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
-            parser={value => value!.replace(/\$\s?|(,*)/g, '')}
+            parser={value => parseInt(value!.replace(/\$\s?|(,*)/g, ''), 10) || 0}
           />
         </Form.Item>
 

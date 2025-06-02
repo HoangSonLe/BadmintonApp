@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card, Row, Col, Statistic, Alert, Typography } from 'antd';
-import { UserOutlined, HomeOutlined, DollarOutlined, CheckCircleOutlined, BarChartOutlined } from '@ant-design/icons';
+import { UserOutlined, HomeOutlined, DollarOutlined, BarChartOutlined } from '@ant-design/icons';
 import type { RegistrationSummary } from '../types';
 
 const { Title } = Typography;

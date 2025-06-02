@@ -17,7 +17,6 @@ import {
   DownloadOutlined,
   UploadOutlined,
   ExclamationCircleOutlined,
-  FileTextOutlined,
   DatabaseOutlined,
   ReloadOutlined
 } from '@ant-design/icons';
@@ -36,7 +35,6 @@ interface DataManagerProps {
 
 const DataManager: React.FC<DataManagerProps> = ({
   settings,
-  registrations,
   onDataImport
 }) => {
   const [uploading, setUploading] = useState(false);
