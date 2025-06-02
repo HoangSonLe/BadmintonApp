@@ -1,0 +1,135 @@
+import React, { useState } from 'react';
+import { Card, Form, InputNumber, Button, Typography, message } from 'antd';
+import { SettingOutlined, HomeOutlined, UserOutlined, DollarOutlined, ControlOutlined } from '@ant-design/icons';
+import type { AppSettings } from '../types';
+import CustomLabel from './CustomLabel';
+
+const { Title } = Typography;
+
+interface SettingsProps {
+  settings: AppSettings;
+  onSettingsChange: (settings: AppSettings) => void;
+}
+
+const Settings: React.FC<SettingsProps> = ({ settings, onSettingsChange }) => {
+  const [form] = Form.useForm();
+
+  const handleSubmit = (values: AppSettings) => {
+    onSettingsChange(values);
+    message.success('Cài đặt đã được lưu thành công!');
+  };
+
+  return (
+    <Card className="fade-in-up">
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        marginBottom: '24px',
+        gap: '16px'
+      }}>
+        <div style={{
+          width: '44px',
+          height: '44px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'linear-gradient(135deg, #722ed1 0%, #9254de 100%)',
+          borderRadius: '12px',
+          color: 'white',
+          fontSize: '22px',
+          boxShadow: '0 4px 12px rgba(114, 46, 209, 0.3)'
+        }}>
+          <ControlOutlined />
+        </div>
+        <Title level={2} className="mb-0" style={{
+          color: '#722ed1',
+          fontSize: '26px',
+          fontWeight: 600,
+          lineHeight: 1.2,
+          marginTop: '2px'
+        }}>
+          Cài đặt hệ thống
+        </Title>
+      </div>
+
+      <Form
+        form={form}
+        layout="vertical"
+        initialValues={settings}
+        onFinish={handleSubmit}
+        className="max-w-md"
+      >
+        <Form.Item
+          label={
+            <CustomLabel icon={<HomeOutlined />}>
+              Số sân mặc định
+            </CustomLabel>
+          }
+          name="courtsCount"
+          rules={[
+            { required: true, message: 'Vui lòng nhập số sân!' },
+            { type: 'number', min: 1, message: 'Số sân phải lớn hơn 0!' }
+          ]}
+        >
+          <InputNumber
+            min={1}
+            size="large"
+            style={{ width: '100%' }}
+            placeholder="Nhập số sân mặc định"
+          />
+        </Form.Item>
+
+        <Form.Item
+          label={
+            <CustomLabel icon={<UserOutlined />}>
+              Số người/sân
+            </CustomLabel>
+          }
+          name="playersPerCourt"
+          rules={[
+            { required: true, message: 'Vui lòng nhập số người/sân!' },
+            { type: 'number', min: 1, message: 'Số người/sân phải lớn hơn 0!' }
+          ]}
+        >
+          <InputNumber
+            min={1}
+            size="large"
+            style={{ width: '100%' }}
+            placeholder="Nhập số người/sân"
+          />
+        </Form.Item>
+
+        <Form.Item
+          label={
+            <CustomLabel icon={<DollarOutlined />}>
+              Phí thuê thêm sân (VNĐ)
+            </CustomLabel>
+          }
+          name="extraCourtFee"
+          rules={[
+            { required: true, message: 'Vui lòng nhập phí thuê thêm sân!' },
+            { type: 'number', min: 0, message: 'Phí không được âm!' }
+          ]}
+        >
+          <InputNumber
+            min={0}
+            step={1000}
+            size="large"
+            style={{ width: '100%' }}
+            placeholder="Nhập phí thuê thêm sân"
+            formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+            parser={value => value!.replace(/\$\s?|(,*)/g, '')}
+          />
+        </Form.Item>
+
+        <Form.Item>
+          <Button type="primary" htmlType="submit" size="large" block>
+            Lưu cài đặt
+          </Button>
+        </Form.Item>
+      </Form>
+    </Card>
+  );
+};
+
+export default Settings;

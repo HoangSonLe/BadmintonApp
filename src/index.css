@@ -1,0 +1,466 @@
+@import 'antd/dist/reset.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom CSS for Badminton App */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+}
+
+/* Header styling */
+.ant-layout-header {
+  background: linear-gradient(90deg, #1890ff 0%, #722ed1 100%) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1) !important;
+  border-bottom: 3px solid #40a9ff;
+}
+
+.ant-layout-header h2 {
+  color: white !important;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  font-weight: 700;
+}
+
+/* Content area */
+.ant-layout-content {
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%) !important;
+  min-height: calc(100vh - 64px);
+  padding: 32px 24px !important;
+}
+
+/* Tabs styling */
+.ant-tabs {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.ant-tabs-nav {
+  background: linear-gradient(90deg, #f8f9fa 0%, #e9ecef 100%);
+  margin: 0 !important;
+  padding: 0 24px;
+}
+
+.ant-tabs-tab {
+  border-radius: 12px 12px 0 0 !important;
+  margin: 8px 4px 0 4px !important;
+  padding: 12px 24px !important;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.ant-tabs-tab:hover {
+  background: rgba(24, 144, 255, 0.1);
+}
+
+.ant-tabs-tab-active {
+  background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%) !important;
+  color: white !important;
+  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.3);
+}
+
+.ant-tabs-tab-active .anticon {
+  color: white !important;
+}
+
+.ant-tabs-content-holder {
+  padding: 32px;
+  background: white;
+}
+
+/* Card styling */
+.ant-card {
+  border-radius: 16px !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08) !important;
+  border: none !important;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.ant-card:hover {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12) !important;
+}
+
+.ant-card-head {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-bottom: 2px solid #f0f0f0 !important;
+  border-radius: 16px 16px 0 0 !important;
+}
+
+/* Button styling */
+.ant-btn-primary {
+  background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%) !important;
+  border: none !important;
+  border-radius: 8px !important;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.3);
+  transition: all 0.3s ease;
+}
+
+.ant-btn-primary:hover {
+  box-shadow: 0 4px 12px rgba(24, 144, 255, 0.4) !important;
+  background: linear-gradient(135deg, #40a9ff 0%, #1890ff 100%) !important;
+}
+
+.ant-btn-danger {
+  background: linear-gradient(135deg, #ff4d4f 0%, #ff7875 100%) !important;
+  border: none !important;
+  border-radius: 8px !important;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(255, 77, 79, 0.3);
+}
+
+.ant-btn-danger:hover {
+  box-shadow: 0 4px 12px rgba(255, 77, 79, 0.4) !important;
+}
+
+/* Form styling */
+.ant-form-item-label > label {
+  font-weight: 600;
+  color: #262626;
+  font-size: 16px;
+  margin-bottom: 8px;
+  display: block;
+  min-height: 24px;
+}
+
+/* Form item with custom label */
+.ant-form-item-label {
+  padding-bottom: 8px !important;
+}
+
+.ant-form-item-label .custom-label {
+  margin-bottom: 0;
+  padding: 4px 0;
+}
+
+/* Ensure consistent spacing for all form items */
+.ant-form-item {
+  margin-bottom: 24px !important;
+}
+
+/* Custom label styling */
+.custom-label {
+  font-weight: 600 !important;
+  color: #1890ff !important;
+  font-size: 17px !important;
+  margin-bottom: 12px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 16px !important;
+  min-height: 36px !important;
+  line-height: 1.4 !important;
+  padding: 4px 0 !important;
+}
+
+.custom-label-icon {
+  width: 28px !important;
+  height: 28px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+  background: linear-gradient(135deg, #52c41a 0%, #73d13d 100%) !important;
+  border-radius: 8px !important;
+  color: white !important;
+  font-size: 16px !important;
+  box-shadow: 0 2px 6px rgba(82, 196, 26, 0.3) !important;
+}
+
+.custom-label-icon .anticon {
+  font-size: 16px !important;
+  color: white !important;
+  line-height: 1 !important;
+  width: auto !important;
+  height: auto !important;
+}
+
+.custom-label-text {
+  flex: 1 !important;
+  line-height: 1.4 !important;
+  font-size: 17px !important;
+  font-weight: 600 !important;
+  margin-top: 2px !important;
+  color: #1890ff !important;
+}
+
+/* Legacy support for direct icon in custom-label */
+.custom-label .anticon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #52c41a 0%, #73d13d 100%);
+  border-radius: 8px;
+  color: white !important;
+  font-size: 16px !important;
+  box-shadow: 0 2px 6px rgba(82, 196, 26, 0.3);
+  line-height: 1 !important;
+}
+
+/* Input styling */
+.ant-input, .ant-input-number, .ant-picker {
+  border-radius: 12px !important;
+  border: 2px solid #e8f4fd !important;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%) !important;
+  padding: 12px 16px !important;
+  font-size: 16px !important;
+  height: 48px !important;
+  line-height: 1.5 !important;
+  display: flex !important;
+  align-items: center !important;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.08);
+}
+
+.ant-input:hover, .ant-input-number:hover, .ant-picker:hover {
+  border-color: #91d5ff !important;
+  box-shadow: 0 3px 8px rgba(24, 144, 255, 0.15) !important;
+}
+
+.ant-input:focus, .ant-input-number:focus, .ant-picker:focus {
+  border-color: #40a9ff !important;
+  box-shadow: 0 0 0 4px rgba(24, 144, 255, 0.15) !important;
+}
+
+/* Input with prefix icon */
+.ant-input-affix-wrapper {
+  border-radius: 12px !important;
+  border: 2px solid #e8f4fd !important;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%) !important;
+  padding: 8px 16px !important;
+  height: 48px !important;
+  display: flex !important;
+  align-items: center !important;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(24, 144, 255, 0.08);
+}
+
+.ant-input-affix-wrapper:hover {
+  border-color: #91d5ff !important;
+  box-shadow: 0 3px 8px rgba(24, 144, 255, 0.15) !important;
+}
+
+.ant-input-affix-wrapper:focus-within {
+  border-color: #40a9ff !important;
+  box-shadow: 0 0 0 4px rgba(24, 144, 255, 0.15) !important;
+}
+
+.ant-input-affix-wrapper .ant-input {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 4px 0 !important;
+  height: 32px !important;
+  line-height: 1.5 !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.ant-input-prefix {
+  margin-right: 12px;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.ant-input-prefix .anticon {
+  color: #1890ff;
+  font-size: 18px;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+/* Week picker styling */
+.ant-picker {
+  width: 100% !important;
+}
+
+.ant-picker-input > input {
+  font-size: 16px !important;
+  color: #262626 !important;
+  line-height: 1.5 !important;
+  padding: 0 !important;
+  height: 24px !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.ant-picker-suffix {
+  color: #1890ff !important;
+  font-size: 18px !important;
+}
+
+/* Input number styling */
+.ant-input-number {
+  width: 100% !important;
+}
+
+.ant-input-number-input {
+  font-size: 16px !important;
+  padding: 0 16px !important;
+  line-height: 1.5 !important;
+  height: 24px !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+/* Compact input group */
+.ant-input-group-compact {
+  display: flex !important;
+  gap: 0 !important;
+}
+
+.ant-input-group-compact .ant-input-affix-wrapper {
+  border-radius: 12px 0 0 12px !important;
+  border-right: none !important;
+  flex: 1;
+}
+
+.ant-input-group-compact .ant-btn {
+  border-radius: 0 12px 12px 0 !important;
+  height: 48px !important;
+  padding: 0 24px !important;
+  font-weight: 600;
+  font-size: 16px;
+  border-left: none !important;
+}
+
+/* Space compact styling */
+.ant-space-compact {
+  width: 100%;
+}
+
+.ant-space-compact .ant-input-affix-wrapper {
+  border-radius: 12px 0 0 12px !important;
+  flex: 1;
+}
+
+.ant-space-compact .ant-btn {
+  border-radius: 0 12px 12px 0 !important;
+  height: 48px !important;
+  border-left: 2px solid #40a9ff !important;
+}
+
+/* List styling */
+.ant-list-item {
+  border-radius: 8px !important;
+  margin-bottom: 8px !important;
+  padding: 16px !important;
+  background: #fafafa;
+  border: 1px solid #f0f0f0 !important;
+  transition: all 0.3s ease;
+}
+
+.ant-list-item:hover {
+  background: #f0f9ff;
+  border-color: #40a9ff !important;
+}
+
+/* Statistic styling */
+.ant-statistic {
+  text-align: center;
+}
+
+.ant-statistic-title {
+  font-weight: 600;
+  color: #595959;
+  margin-bottom: 8px;
+}
+
+.ant-statistic-content {
+  font-weight: 700;
+}
+
+/* Alert styling */
+.ant-alert {
+  border-radius: 12px !important;
+  border: none !important;
+  font-weight: 500;
+}
+
+.ant-alert-success {
+  background: linear-gradient(135deg, #f6ffed 0%, #d9f7be 100%) !important;
+  border-left: 4px solid #52c41a !important;
+}
+
+/* Tag styling */
+.ant-tag {
+  border-radius: 16px !important;
+  font-weight: 600;
+  padding: 4px 12px;
+  border: none !important;
+}
+
+/* Custom animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in-up {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+/* Custom gradients for different sections */
+.gradient-blue {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.gradient-green {
+  background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
+}
+
+.gradient-orange {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.gradient-purple {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+  .ant-layout-content {
+    padding: 16px 12px !important;
+  }
+
+  .ant-tabs-content-holder {
+    padding: 16px;
+  }
+
+  .ant-card {
+    margin-bottom: 16px;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #1890ff 0%, #40a9ff 100%);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #40a9ff 0%, #1890ff 100%);
+}
