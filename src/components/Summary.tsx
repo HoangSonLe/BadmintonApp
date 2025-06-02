@@ -22,14 +22,7 @@ const Summary: React.FC<SummaryProps> = ({ summary, settings }) => {
     }).format(amount);
   };
 
-  const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat('vi-VN', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    }).format(date);
-  };
+
 
   const formatDateShort = (date: Date) => {
     return new Intl.DateTimeFormat('vi-VN', {

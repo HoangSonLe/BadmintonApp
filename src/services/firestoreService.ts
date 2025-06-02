@@ -4,17 +4,14 @@ import {
   getDoc,
   getDocs,
   setDoc,
-  addDoc,
-  updateDoc,
   deleteDoc,
   query,
   orderBy,
-  where,
   Timestamp,
   writeBatch
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import type { AppSettings, WeeklyRegistration, Player } from '../types';
+import type { AppSettings, WeeklyRegistration } from '../types';
 
 // Firestore collection names
 const COLLECTIONS = {
