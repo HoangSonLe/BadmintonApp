@@ -13,9 +13,9 @@ import {
   Select,
   Space,
   DatePicker,
-
   Alert,
-  Input
+  Input,
+  Spin
 } from 'antd';
 import {
   DeleteOutlined,
@@ -25,7 +25,9 @@ import {
   OrderedListOutlined,
   FilterOutlined,
   BarChartOutlined,
-  SearchOutlined
+  SearchOutlined,
+  EnvironmentOutlined,
+  ShopOutlined
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import weekOfYear from 'dayjs/plugin/weekOfYear';
@@ -40,13 +42,15 @@ interface RegistrationListProps {
   onDeleteRegistration: (id: string) => void;
   onDeletePlayer?: (registrationId: string, playerId: string) => void;
   isAdmin?: boolean;
+  loading?: boolean;
 }
 
 const RegistrationList: React.FC<RegistrationListProps> = ({
   registrations,
   onDeleteRegistration,
   onDeletePlayer,
-  isAdmin = false
+  isAdmin = false,
+  loading = false
 }) => {
   const [filterType, setFilterType] = useState<'all' | 'week' | 'specific-week' | 'month' | 'year'>('all');
   const [selectedDate, setSelectedDate] = useState<dayjs.Dayjs | null>(null);
@@ -88,6 +92,15 @@ const RegistrationList: React.FC<RegistrationListProps> = ({
       style: 'currency',
       currency: 'VND'
     }).format(amount);
+  };
+
+  // Function to open Google Maps
+  const openGoogleMaps = (address: string) => {
+    if (address) {
+      const encodedAddress = encodeURIComponent(address);
+      const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
+      window.open(googleMapsUrl, '_blank');
+    }
   };
 
   // Get available weeks for dropdown
@@ -274,49 +287,52 @@ const RegistrationList: React.FC<RegistrationListProps> = ({
 
   if (registrations.length === 0) {
     return (
-      <Card className="fade-in-up">
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          marginBottom: '24px',
-          gap: '16px'
-        }}>
+      <Spin spinning={loading} tip="Đang tải dữ liệu...">
+        <Card className="fade-in-up">
           <div style={{
-            width: '44px',
-            height: '44px',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            background: 'linear-gradient(135deg, #1890ff 0%, #40a9ff 100%)',
-            borderRadius: '12px',
-            color: 'white',
-            fontSize: '22px',
-            boxShadow: '0 4px 12px rgba(24, 144, 255, 0.3)'
+            marginBottom: '24px',
+            gap: '16px'
           }}>
-            <OrderedListOutlined />
+            <div style={{
+              width: '44px',
+              height: '44px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'linear-gradient(135deg, #1890ff 0%, #40a9ff 100%)',
+              borderRadius: '12px',
+              color: 'white',
+              fontSize: '22px',
+              boxShadow: '0 4px 12px rgba(24, 144, 255, 0.3)'
+            }}>
+              <OrderedListOutlined />
+            </div>
+            <Title level={2} className="mb-0" style={{
+              color: '#1890ff',
+              fontSize: '26px',
+              fontWeight: 600,
+              lineHeight: 1.2,
+              marginTop: '2px'
+            }}>
+              Danh sách đăng ký
+            </Title>
           </div>
-          <Title level={2} className="mb-0" style={{
-            color: '#1890ff',
-            fontSize: '26px',
-            fontWeight: 600,
-            lineHeight: 1.2,
-            marginTop: '2px'
-          }}>
-            Danh sách đăng ký
-          </Title>
-        </div>
-        <Empty
-          description="Chưa có đăng ký nào"
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-          style={{ padding: '40px 0' }}
-        />
-      </Card>
+          <Empty
+            description="Chưa có đăng ký nào"
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            style={{ padding: '40px 0' }}
+          />
+        </Card>
+      </Spin>
     );
   }
 
   return (
     <Space direction="vertical" size="large" style={{ width: '100%' }}>
-      <Card className="fade-in-up">
+      <Spin spinning={loading} tip="Đang tải dữ liệu...">
+        <Card className="fade-in-up">
         <div style={{
           display: 'flex',
           alignItems: 'center',
@@ -732,6 +748,65 @@ const RegistrationList: React.FC<RegistrationListProps> = ({
                               </div>
                             </Col>
                           )}
+
+                          {/* Court Information */}
+                          {(registration.settings.courtName || registration.settings.courtAddress) && (
+                            <Col span={24}>
+                              <div style={{
+                                backgroundColor: '#f0f9ff',
+                                border: '1px solid #0ea5e9',
+                                borderRadius: '6px',
+                                padding: '8px',
+                                marginTop: '8px'
+                              }}>
+                                <div style={{
+                                  color: '#0ea5e9',
+                                  fontWeight: 'bold',
+                                  marginBottom: '4px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '6px'
+                                }}>
+                                  <ShopOutlined />
+                                  Thông tin sân
+                                </div>
+                                <div style={{
+                                  fontSize: '12px',
+                                  color: '#666',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: '4px'
+                                }}>
+                                  {registration.settings.courtName && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                      <ShopOutlined style={{ color: '#0ea5e9', fontSize: '12px' }} />
+                                      <span style={{ fontWeight: 600 }}>{registration.settings.courtName}</span>
+                                    </div>
+                                  )}
+                                  {registration.settings.courtAddress && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                      <EnvironmentOutlined style={{ color: '#0ea5e9', fontSize: '12px' }} />
+                                      <span style={{ flex: 1 }}>{registration.settings.courtAddress}</span>
+                                      <Button
+                                        type="link"
+                                        size="small"
+                                        onClick={() => openGoogleMaps(registration.settings.courtAddress!)}
+                                        style={{
+                                          color: '#0ea5e9',
+                                          fontWeight: 600,
+                                          padding: '0 4px',
+                                          height: 'auto',
+                                          fontSize: '11px'
+                                        }}
+                                      >
+                                        📍 Bản đồ
+                                      </Button>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </Col>
+                          )}
                         </Row>
                       </Col>
                     </Row>
@@ -741,7 +816,8 @@ const RegistrationList: React.FC<RegistrationListProps> = ({
             }}
           />
         )}
-      </Card>
+        </Card>
+      </Spin>
     </Space>
   );
 };

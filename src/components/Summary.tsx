@@ -1,17 +1,13 @@
 import React from 'react';
-import { Card, Row, Col, Statistic, Alert, Typography } from 'antd';
-import { UserOutlined, HomeOutlined, DollarOutlined, BarChartOutlined, CalendarOutlined } from '@ant-design/icons';
-import type { RegistrationSummary } from '../types';
+import { Card, Row, Col, Statistic, Alert, Typography, Button, Space } from 'antd';
+import { UserOutlined, HomeOutlined, DollarOutlined, BarChartOutlined, CalendarOutlined, EnvironmentOutlined, ShopOutlined } from '@ant-design/icons';
+import type { RegistrationSummary, AppSettings } from '../types';
 
 const { Title } = Typography;
 
 interface SummaryProps {
   summary: RegistrationSummary;
-  settings: {
-    courtsCount: number;
-    playersPerCourt: number;
-    extraCourtFee: number;
-  };
+  settings: AppSettings;
 }
 
 const Summary: React.FC<SummaryProps> = ({ summary, settings }) => {
@@ -22,14 +18,21 @@ const Summary: React.FC<SummaryProps> = ({ summary, settings }) => {
     }).format(amount);
   };
 
-
-
   const formatDateShort = (date: Date) => {
     return new Intl.DateTimeFormat('vi-VN', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric'
     }).format(date);
+  };
+
+  // Function to open Google Maps
+  const openGoogleMaps = () => {
+    if (settings.courtAddress) {
+      const encodedAddress = encodeURIComponent(settings.courtAddress);
+      const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
+      window.open(googleMapsUrl, '_blank');
+    }
   };
 
   return (
@@ -92,6 +95,50 @@ const Summary: React.FC<SummaryProps> = ({ summary, settings }) => {
           )}
         </div>
       </div>
+
+      {/* Court Information */}
+      {(settings.courtName || settings.courtAddress) && (
+        <Card
+          size="small"
+          style={{
+            marginBottom: '24px',
+            background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
+            border: '2px solid #0ea5e9'
+          }}
+        >
+          <Space direction="vertical" size="small" style={{ width: '100%' }}>
+            {settings.courtName && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <ShopOutlined style={{ color: '#0ea5e9', fontSize: '16px' }} />
+                <span style={{ fontWeight: 600, color: '#0ea5e9', fontSize: '16px' }}>
+                  {settings.courtName}
+                </span>
+              </div>
+            )}
+            {settings.courtAddress && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <EnvironmentOutlined style={{ color: '#0ea5e9', fontSize: '14px' }} />
+                <span style={{ color: '#666', fontSize: '14px', flex: 1 }}>
+                  {settings.courtAddress}
+                </span>
+                <Button
+                  type="link"
+                  size="small"
+                  onClick={openGoogleMaps}
+                  style={{
+                    color: '#0ea5e9',
+                    fontWeight: 600,
+                    padding: '0 8px',
+                    height: 'auto'
+                  }}
+                >
+                  📍 Xem bản đồ
+                </Button>
+              </div>
+            )}
+          </Space>
+        </Card>
+      )}
 
       {/* Row 1: Thông tin cơ bản - 3 cột đều nhau */}
       <Row gutter={[16, 16]}>

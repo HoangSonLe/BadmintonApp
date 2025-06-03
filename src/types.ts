@@ -4,6 +4,8 @@ export interface AppSettings {
   playersPerCourt: number;
   extraCourtFee: number;
   registrationEnabled: boolean; // Trạng thái mở/khóa đăng ký
+  courtAddress?: string; // Địa chỉ sân cầu lông
+  courtName?: string; // Tên sân cầu lông
 }
 
 // Player Interface

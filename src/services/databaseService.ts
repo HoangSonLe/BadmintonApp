@@ -23,7 +23,9 @@ const DEFAULT_DATABASE: DatabaseSchema = {
     courtsCount: 2,
     playersPerCourt: 4,
     extraCourtFee: 100000,
-    registrationEnabled: true
+    registrationEnabled: true,
+    courtName: 'Sân Cầu Lông ABC',
+    courtAddress: 'Số 123 Đường ABC, Quận XYZ, TP.HCM'
   },
   registrations: [],
   metadata: {
@@ -327,7 +329,9 @@ export class DatabaseService {
           courtsCount: 2,
           playersPerCourt: 4,
           extraCourtFee: 100000,
-          registrationEnabled: true
+          registrationEnabled: true,
+          courtName: 'Sân Cầu Lông ABC',
+          courtAddress: 'Số 123 Đường ABC, Quận XYZ, TP.HCM'
         }
       },
       // Tuần 2 - Tuần trước
@@ -347,7 +351,9 @@ export class DatabaseService {
           courtsCount: 2,
           playersPerCourt: 4,
           extraCourtFee: 100000,
-          registrationEnabled: true
+          registrationEnabled: true,
+          courtName: 'Sân Cầu Lông ABC',
+          courtAddress: 'Số 123 Đường ABC, Quận XYZ, TP.HCM'
         }
       },
       // Tuần 3 - 2 tuần trước
@@ -372,7 +378,9 @@ export class DatabaseService {
           courtsCount: 2,
           playersPerCourt: 4,
           extraCourtFee: 100000,
-          registrationEnabled: true
+          registrationEnabled: true,
+          courtName: 'Sân Cầu Lông ABC',
+          courtAddress: 'Số 123 Đường ABC, Quận XYZ, TP.HCM'
         }
       },
       // Tuần 4 - Tháng trước
@@ -390,7 +398,9 @@ export class DatabaseService {
           courtsCount: 2,
           playersPerCourt: 4,
           extraCourtFee: 100000,
-          registrationEnabled: true
+          registrationEnabled: true,
+          courtName: 'Sân Cầu Lông ABC',
+          courtAddress: 'Số 123 Đường ABC, Quận XYZ, TP.HCM'
         }
       },
       // Tuần 5 - Tháng trước
@@ -412,7 +422,9 @@ export class DatabaseService {
           courtsCount: 2,
           playersPerCourt: 4,
           extraCourtFee: 100000,
-          registrationEnabled: true
+          registrationEnabled: true,
+          courtName: 'Sân Cầu Lông ABC',
+          courtAddress: 'Số 123 Đường ABC, Quận XYZ, TP.HCM'
         }
       }
     ];

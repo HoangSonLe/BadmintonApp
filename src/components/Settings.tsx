@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Card, Form, InputNumber, Button, Typography, Switch } from 'antd';
-import { HomeOutlined, UserOutlined, DollarOutlined, ControlOutlined, LockOutlined } from '@ant-design/icons';
+import { Card, Form, InputNumber, Button, Typography, Switch, Input } from 'antd';
+import { HomeOutlined, UserOutlined, DollarOutlined, ControlOutlined, LockOutlined, EnvironmentOutlined, ShopOutlined } from '@ant-design/icons';
 import type { AppSettings } from '../types';
 import CustomLabel from './CustomLabel';
 
@@ -124,6 +124,35 @@ const Settings: React.FC<SettingsProps> = ({ settings, onSettingsChange }) => {
             placeholder="Nhập phí thuê thêm sân"
             formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
             parser={value => parseInt(value!.replace(/\$\s?|(,*)/g, ''), 10) || 0}
+          />
+        </Form.Item>
+
+        <Form.Item
+          label={
+            <CustomLabel icon={<ShopOutlined />}>
+              Tên sân cầu lông
+            </CustomLabel>
+          }
+          name="courtName"
+        >
+          <Input
+            size="large"
+            placeholder="Nhập tên sân cầu lông"
+          />
+        </Form.Item>
+
+        <Form.Item
+          label={
+            <CustomLabel icon={<EnvironmentOutlined />}>
+              Địa chỉ sân
+            </CustomLabel>
+          }
+          name="courtAddress"
+        >
+          <Input.TextArea
+            size="large"
+            rows={3}
+            placeholder="Nhập địa chỉ sân cầu lông"
           />
         </Form.Item>
 

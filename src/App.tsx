@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Layout, Tabs, Typography, Space, message, Button, App as AntApp } from 'antd';
 import { CalendarOutlined, UnorderedListOutlined, SettingOutlined, FileTextOutlined, DatabaseOutlined, LockOutlined, PlayCircleOutlined, PauseCircleOutlined } from '@ant-design/icons';
 import type { AppSettings, WeeklyRegistration as WeeklyRegistrationType, RegistrationSummary } from './types';
@@ -24,7 +24,9 @@ function App() {
     courtsCount: 2,
     playersPerCourt: 4,
     extraCourtFee: 100000,
-    registrationEnabled: true // Mặc định cho phép đăng ký
+    registrationEnabled: true, // Mặc định cho phép đăng ký
+    courtName: 'Sân Cầu Lông ABC',
+    courtAddress: 'Số 123 Đường ABC, Quận XYZ, TP.HCM'
   });
   const [registrations, setRegistrations] = useState<WeeklyRegistrationType[]>([]);
   const [currentSummary, setCurrentSummary] = useState<RegistrationSummary>({
@@ -40,6 +42,10 @@ function App() {
   // Admin authentication states
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [showAdminAuth, setShowAdminAuth] = useState<boolean>(false);
+
+  // Track last time data was loaded for auto-refresh
+  const lastDataLoadTime = useRef<number>(Date.now());
+  const [isLoadingData, setIsLoadingData] = useState<boolean>(false);
 
   // Check admin status using SecurityService on component mount
   useEffect(() => {
@@ -115,6 +121,37 @@ function App() {
     return calculateSummary(nextWeekRegistration);
   }, []);
 
+  // Function to reload data from database
+  const reloadData = useCallback(async (showMessage = false) => {
+    setIsLoadingData(true);
+    try {
+      // Load data from Firestore database
+      const dbSettings = await DatabaseService.getSettings();
+      const dbRegistrations = await DatabaseService.getRegistrations();
+
+      setSettings(dbSettings);
+      setRegistrations(dbRegistrations);
+
+      // Update summary with fresh data
+      setCurrentSummary(calculateSummaryFromFirebase(dbRegistrations, dbSettings));
+
+      // Update last load time
+      lastDataLoadTime.current = Date.now();
+
+      if (showMessage) {
+        const stats = await DatabaseService.getStats();
+        message.success({
+          content: `🔄 Đã tải lại dữ liệu! ${stats.totalRegistrations} đăng ký, ${stats.totalPlayers} người chơi.`,
+          duration: 3,
+        });
+      }
+    } catch (error) {
+      message.error('Lỗi khi tải lại dữ liệu: ' + (error as Error).message);
+    } finally {
+      setIsLoadingData(false);
+    }
+  }, [calculateSummaryFromFirebase]);
+
   // Initialize database and load data on component mount
   useEffect(() => {
     const initializeApp = async () => {
@@ -122,15 +159,8 @@ function App() {
         // Initialize database
         await DatabaseService.initializeDatabase();
 
-        // Load data from Firestore database
-        const dbSettings = await DatabaseService.getSettings();
-        const dbRegistrations = await DatabaseService.getRegistrations();
-
-        setSettings(dbSettings);
-        setRegistrations(dbRegistrations);
-
-        // Initialize summary with Firebase data
-        setCurrentSummary(calculateSummaryFromFirebase(dbRegistrations, dbSettings));
+        // Load initial data
+        await reloadData();
 
         // Show welcome message
         const stats = await DatabaseService.getStats();
@@ -144,7 +174,7 @@ function App() {
     };
 
     initializeApp();
-  }, [calculateSummaryFromFirebase]);
+  }, [reloadData]);
 
   // Handle settings change
   const handleSettingsChange = async (newSettings: AppSettings) => {
@@ -464,12 +494,15 @@ function App() {
         </span>
       ),
       children: (
-        <RegistrationList
-          registrations={registrations}
-          onDeleteRegistration={handleDeleteRegistration}
-          onDeletePlayer={handleDeletePlayer}
-          isAdmin={isAdmin}
-        />
+        <div style={{ position: 'relative' }}>
+          <RegistrationList
+            registrations={registrations}
+            onDeleteRegistration={handleDeleteRegistration}
+            onDeletePlayer={handleDeletePlayer}
+            isAdmin={isAdmin}
+            loading={isLoadingData}
+          />
+        </div>
       ),
     },
   ];
@@ -536,8 +569,8 @@ function App() {
   // Combine tabs based on admin status
   const tabItems = isAdmin ? [...baseTabs, ...adminTabs] : [...baseTabs, ...adminTabs];
 
-  // Handle tab change with admin check
-  const handleTabChange = (key: string) => {
+  // Handle tab change with admin check and auto-reload
+  const handleTabChange = async (key: string) => {
     const adminTabKeys = ['settings', 'data', 'demo', 'security'];
 
     if (adminTabKeys.includes(key) && !isAdmin) {
@@ -546,6 +579,16 @@ function App() {
     }
 
     setActiveTab(key);
+
+    // Auto-reload data when switching to list tab
+    if (key === 'list') {
+      const timeSinceLastLoad = Date.now() - lastDataLoadTime.current;
+
+      // Only reload if it's been more than 2 seconds since last load
+      if (timeSinceLastLoad > 2000) {
+        await reloadData(true);
+      }
+    }
   };
 
   return (
