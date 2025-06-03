@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Layout, Tabs, Typography, Space, message } from 'antd';
-import { CalendarOutlined, UnorderedListOutlined, SettingOutlined, FileTextOutlined, DatabaseOutlined } from '@ant-design/icons';
+import { Layout, Tabs, Typography, Space, message, Button } from 'antd';
+import { CalendarOutlined, UnorderedListOutlined, SettingOutlined, FileTextOutlined, DatabaseOutlined, LockOutlined } from '@ant-design/icons';
+import dayjs from 'dayjs';
 import type { AppSettings, WeeklyRegistration as WeeklyRegistrationType, RegistrationSummary } from './types';
 import Settings from './components/Settings';
 import WeeklyRegistration from './components/WeeklyRegistration';
@@ -8,6 +9,7 @@ import Summary from './components/Summary';
 import RegistrationList from './components/RegistrationList';
 import DataManager from './components/DataManager';
 import DatabaseDemo from './components/DatabaseDemo';
+import AdminAuth from './components/AdminAuth';
 import { DatabaseService } from './services/databaseService';
 
 const { Header, Content } = Layout;
@@ -30,6 +32,31 @@ function App() {
     feePerExtraPlayer: 0,
     weekInfo: null
   });
+
+  // Admin authentication states
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [showAdminAuth, setShowAdminAuth] = useState<boolean>(false);
+
+  // Check admin status from localStorage on component mount
+  useEffect(() => {
+    const adminStatus = localStorage.getItem('isAdmin');
+    const adminAuthTime = localStorage.getItem('adminAuthTime');
+
+    if (adminStatus === 'true' && adminAuthTime) {
+      // Check if admin session is still valid (24 hours)
+      const authTime = parseInt(adminAuthTime);
+      const currentTime = Date.now();
+      const sessionDuration = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+
+      if (currentTime - authTime < sessionDuration) {
+        setIsAdmin(true);
+      } else {
+        // Session expired, clear localStorage
+        localStorage.removeItem('isAdmin');
+        localStorage.removeItem('adminAuthTime');
+      }
+    }
+  }, []);
 
   // Calculate summary for current week registration
   const calculateSummary = (registration: WeeklyRegistrationType): RegistrationSummary => {
@@ -69,27 +96,32 @@ function App() {
     };
   };
 
-  // Find the most recent or current week registration
-  const findCurrentWeekRegistration = (registrations: WeeklyRegistrationType[]): WeeklyRegistrationType | null => {
+  // Find the next week registration (same logic as WeeklyRegistration component)
+  const findNextWeekRegistration = (registrations: WeeklyRegistrationType[]): WeeklyRegistrationType | null => {
     if (registrations.length === 0) return null;
 
-    // Sort by weekStart descending to get the most recent
-    const sortedRegistrations = [...registrations].sort((a, b) =>
-      new Date(b.weekStart).getTime() - new Date(a.weekStart).getTime()
-    );
+    // Calculate next week dates (same logic as WeeklyRegistration)
+    const nextWeek = dayjs().add(1, 'week').startOf('week').add(1, 'day'); // Monday của tuần tiếp theo
+    const nextWeekStart = nextWeek.toDate();
+    const nextWeekEnd = nextWeek.endOf('week').add(1, 'day').toDate(); // Sunday
 
-    return sortedRegistrations[0]; // Return the most recent registration
+    // Find registration for next week
+    return registrations.find(reg => {
+      const regStart = new Date(reg.weekStart);
+      const regEnd = new Date(reg.weekEnd);
+      return regStart.getTime() === nextWeekStart.getTime() && regEnd.getTime() === nextWeekEnd.getTime();
+    }) || null;
   };
 
-  // Calculate summary from Firebase data
+  // Calculate summary from Firebase data for next week (same as WeeklyRegistration)
   const calculateSummaryFromFirebase = useCallback((registrations: WeeklyRegistrationType[], settings: AppSettings): RegistrationSummary => {
-    const currentRegistration = findCurrentWeekRegistration(registrations);
+    const nextWeekRegistration = findNextWeekRegistration(registrations);
 
-    if (!currentRegistration) {
+    if (!nextWeekRegistration) {
       return createDefaultSummary(settings);
     }
 
-    return calculateSummary(currentRegistration);
+    return calculateSummary(nextWeekRegistration);
   }, []);
 
   // Initialize database and load data on component mount
@@ -129,10 +161,33 @@ function App() {
       setSettings(newSettings);
       await DatabaseService.updateSettings(newSettings);
 
-      // Update summary to reflect new settings with current Firebase data
-      setCurrentSummary(calculateSummaryFromFirebase(registrations, newSettings));
+      // Find and update only the next week registration (current registration being worked on)
+      const nextWeekRegistration = findNextWeekRegistration(registrations);
 
-      message.success('Cài đặt đã được lưu vào database Firestore!');
+      if (nextWeekRegistration) {
+        // Update only the next week registration with new settings
+        const updatedRegistration = {
+          ...nextWeekRegistration,
+          settings: newSettings
+        };
+
+        // Update in database
+        await DatabaseService.updateRegistration(nextWeekRegistration.id, updatedRegistration);
+
+        // Update local state - only update the specific registration
+        const updatedRegistrations = registrations.map(reg =>
+          reg.id === nextWeekRegistration.id ? updatedRegistration : reg
+        );
+        setRegistrations(updatedRegistrations);
+
+        // Update summary to reflect new settings for next week
+        setCurrentSummary(calculateSummaryFromFirebase(updatedRegistrations, newSettings));
+      } else {
+        // If no next week registration exists, just update summary with new settings
+        setCurrentSummary(calculateSummaryFromFirebase(registrations, newSettings));
+      }
+
+      message.success('Cài đặt đã được lưu và áp dụng cho tuần hiện tại!');
     } catch (error) {
       message.error('Lỗi khi lưu cài đặt: ' + (error as Error).message);
     }
@@ -222,6 +277,50 @@ function App() {
     }
   };
 
+  // Handle player deletion from registration
+  const handleDeletePlayer = async (registrationId: string, playerId: string) => {
+    try {
+      // Find the registration
+      const registration = registrations.find(reg => reg.id === registrationId);
+      if (!registration) {
+        message.error('Không tìm thấy đăng ký!');
+        return;
+      }
+
+      // Remove player from the registration
+      const updatedPlayers = registration.players.filter(player => player.id !== playerId);
+
+      if (updatedPlayers.length === 0) {
+        // If no players left, delete the entire registration
+        await handleDeleteRegistration(registrationId);
+        return;
+      }
+
+      // Update registration with remaining players
+      const updatedRegistration = {
+        ...registration,
+        players: updatedPlayers
+      };
+
+      // Update in Firestore
+      await DatabaseService.updateRegistration(registrationId, updatedRegistration);
+
+      // Update local state
+      const newRegistrations = registrations.map(reg =>
+        reg.id === registrationId ? updatedRegistration : reg
+      );
+      setRegistrations(newRegistrations);
+
+      // Update summary after deletion
+      setCurrentSummary(calculateSummaryFromFirebase(newRegistrations, settings));
+
+      const deletedPlayer = registration.players.find(p => p.id === playerId);
+      message.success(`Đã xóa ${deletedPlayer?.name} khỏi đăng ký!`);
+    } catch (error) {
+      message.error('Lỗi khi xóa người chơi: ' + (error as Error).message);
+    }
+  };
+
   // Handle data import from JSON file
   const handleDataImport = async (newSettings: AppSettings, newRegistrations: WeeklyRegistrationType[]) => {
     try {
@@ -250,7 +349,33 @@ function App() {
     }
   };
 
-  const tabItems = [
+  // Admin authentication handlers
+  const handleAdminSuccess = () => {
+    setIsAdmin(true);
+    setShowAdminAuth(false);
+    message.success('Đã xác thực admin thành công!');
+  };
+
+  const handleAdminCancel = () => {
+    setShowAdminAuth(false);
+  };
+
+  const handleAdminLogout = () => {
+    setIsAdmin(false);
+    localStorage.removeItem('isAdmin');
+    localStorage.removeItem('adminAuthTime');
+    setActiveTab('register'); // Switch back to register tab
+    message.info('Đã đăng xuất khỏi chế độ admin');
+  };
+
+  const handleAdminTabClick = () => {
+    if (!isAdmin) {
+      setShowAdminAuth(true);
+    }
+  };
+
+  // Base tabs that are always visible
+  const baseTabs = [
     {
       key: 'register',
       label: (
@@ -282,59 +407,101 @@ function App() {
         <RegistrationList
           registrations={registrations}
           onDeleteRegistration={handleDeleteRegistration}
+          onDeletePlayer={handleDeletePlayer}
+          isAdmin={isAdmin}
         />
       ),
     },
+  ];
+
+  // Admin tabs that require authentication
+  const adminTabs = [
     {
       key: 'settings',
       label: (
-        <span>
+        <span onClick={handleAdminTabClick}>
           <SettingOutlined />
           Cài đặt
+          {!isAdmin && <LockOutlined style={{ marginLeft: '4px', fontSize: '12px' }} />}
         </span>
       ),
-      children: (
+      children: isAdmin ? (
         <Settings
           settings={settings}
           onSettingsChange={handleSettingsChange}
         />
-      ),
+      ) : null,
     },
     {
       key: 'data',
       label: (
-        <span>
+        <span onClick={handleAdminTabClick}>
           <FileTextOutlined />
           Dữ liệu
+          {!isAdmin && <LockOutlined style={{ marginLeft: '4px', fontSize: '12px' }} />}
         </span>
       ),
-      children: (
+      children: isAdmin ? (
         <DataManager
           settings={settings}
           registrations={registrations}
           onDataImport={handleDataImport}
         />
-      ),
+      ) : null,
     },
     {
       key: 'demo',
       label: (
-        <span>
+        <span onClick={handleAdminTabClick}>
           <DatabaseOutlined />
           Demo DB
+          {!isAdmin && <LockOutlined style={{ marginLeft: '4px', fontSize: '12px' }} />}
         </span>
       ),
-      children: <DatabaseDemo />,
+      children: isAdmin ? <DatabaseDemo /> : null,
     },
   ];
+
+  // Combine tabs based on admin status
+  const tabItems = isAdmin ? [...baseTabs, ...adminTabs] : [...baseTabs, ...adminTabs];
+
+  // Handle tab change with admin check
+  const handleTabChange = (key: string) => {
+    const adminTabKeys = ['settings', 'data', 'demo'];
+
+    if (adminTabKeys.includes(key) && !isAdmin) {
+      setShowAdminAuth(true);
+      return;
+    }
+
+    setActiveTab(key);
+  };
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
       <Header style={{ background: '#fff', padding: '0 24px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
-        <div className="flex items-center justify-center h-full">
+        <div className="flex items-center justify-between h-full">
           <Title level={2} style={{ margin: 0, color: '#1890ff' }}>
             🏸 Quản lý đăng ký cầu lông
           </Title>
+
+          {isAdmin && (
+            <Button
+              type="text"
+              danger
+              onClick={handleAdminLogout}
+              icon={<LockOutlined />}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                color: '#ff4d4f',
+                fontWeight: 'bold'
+              }}
+            >
+              Đăng xuất Admin
+            </Button>
+          )}
         </div>
       </Header>
 
@@ -342,13 +509,20 @@ function App() {
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           <Tabs
             activeKey={activeTab}
-            onChange={setActiveTab}
+            onChange={handleTabChange}
             items={tabItems}
             size="large"
             centered
           />
         </div>
       </Content>
+
+      {/* Admin Authentication Modal */}
+      <AdminAuth
+        visible={showAdminAuth}
+        onSuccess={handleAdminSuccess}
+        onCancel={handleAdminCancel}
+      />
     </Layout>
   );
 }

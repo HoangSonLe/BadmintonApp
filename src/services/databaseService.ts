@@ -210,12 +210,17 @@ export class DatabaseService {
   /**
    * Cập nhật registration
    */
-  static updateRegistration(id: string, updatedRegistration: WeeklyRegistration): void {
-    const db = this.readDatabase();
-    const index = db.registrations.findIndex(reg => reg.id === id);
-    if (index !== -1) {
-      db.registrations[index] = updatedRegistration;
-      this.writeDatabase(db);
+  static async updateRegistration(id: string, updatedRegistration: WeeklyRegistration): Promise<void> {
+    try {
+      await FirestoreService.updateRegistration(id, updatedRegistration);
+    } catch (error) {
+      console.error('Error updating registration in Firestore, falling back to localStorage:', error);
+      const db = this.readDatabase();
+      const index = db.registrations.findIndex(reg => reg.id === id);
+      if (index !== -1) {
+        db.registrations[index] = updatedRegistration;
+        this.writeDatabase(db);
+      }
     }
   }
 

@@ -194,6 +194,20 @@ export class FirestoreService {
   }
 
   /**
+   * Cập nhật registration theo ID
+   */
+  static async updateRegistration(id: string, updatedRegistration: WeeklyRegistration): Promise<void> {
+    try {
+      const firestoreReg = this.convertToFirestoreRegistration(updatedRegistration);
+      await setDoc(doc(db, COLLECTIONS.REGISTRATIONS, id), firestoreReg);
+      await this.updateMetadata();
+    } catch (error) {
+      console.error('Error updating registration:', error);
+      throw new Error('Không thể cập nhật đăng ký trong Firestore');
+    }
+  }
+
+  /**
    * Xóa registration theo ID
    */
   static async deleteRegistration(id: string): Promise<void> {

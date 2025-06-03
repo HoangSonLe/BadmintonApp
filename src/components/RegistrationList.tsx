@@ -38,11 +38,15 @@ const { Title, Text } = Typography;
 interface RegistrationListProps {
   registrations: WeeklyRegistration[];
   onDeleteRegistration: (id: string) => void;
+  onDeletePlayer?: (registrationId: string, playerId: string) => void;
+  isAdmin?: boolean;
 }
 
 const RegistrationList: React.FC<RegistrationListProps> = ({
   registrations,
-  onDeleteRegistration
+  onDeleteRegistration,
+  onDeletePlayer,
+  isAdmin = false
 }) => {
   const [filterType, setFilterType] = useState<'all' | 'week' | 'specific-week' | 'month' | 'year'>('all');
   const [selectedDate, setSelectedDate] = useState<dayjs.Dayjs | null>(null);
@@ -380,35 +384,37 @@ const RegistrationList: React.FC<RegistrationListProps> = ({
               return (
                 <List.Item key={registration.id}>
                   <Card size="small" style={{ position: 'relative' }}>
-                    {/* Nút xóa ở góc trên phải */}
-                    <div style={{
-                      position: 'absolute',
-                      top: '12px',
-                      right: '12px',
-                      zIndex: 1
-                    }}>
-                      <Popconfirm
-                        title="Xóa đăng ký"
-                        description="Bạn có chắc chắn muốn xóa đăng ký này?"
-                        onConfirm={() => onDeleteRegistration(registration.id)}
-                        okText="Xóa"
-                        cancelText="Hủy"
-                      >
-                        <Button
-                          danger
-                          size="small"
-                          icon={<DeleteOutlined />}
-                          style={{
-                            borderRadius: '6px',
-                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                          }}
+                    {/* Nút xóa ở góc trên phải - chỉ hiển thị cho admin */}
+                    {isAdmin && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '12px',
+                        right: '12px',
+                        zIndex: 1
+                      }}>
+                        <Popconfirm
+                          title="Xóa đăng ký"
+                          description="Bạn có chắc chắn muốn xóa đăng ký này?"
+                          onConfirm={() => onDeleteRegistration(registration.id)}
+                          okText="Xóa"
+                          cancelText="Hủy"
                         >
-                          Xóa
-                        </Button>
-                      </Popconfirm>
-                    </div>
+                          <Button
+                            danger
+                            size="small"
+                            icon={<DeleteOutlined />}
+                            style={{
+                              borderRadius: '6px',
+                              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                            }}
+                          >
+                            Xóa
+                          </Button>
+                        </Popconfirm>
+                      </div>
+                    )}
 
-                    <div className="mb-4" style={{ paddingRight: '80px' }}>
+                    <div className="mb-4" style={{ paddingRight: isAdmin ? '80px' : '16px' }}>
                       <Title level={4} className="mb-1">
                         Tuần {formatDate(registration.weekStart)} - {formatDate(registration.weekEnd)}
                       </Title>
@@ -493,7 +499,8 @@ const RegistrationList: React.FC<RegistrationListProps> = ({
                                     backgroundColor,
                                     border: isExtraPlayer ? '1px solid #ff7a45' : 'none',
                                     borderRadius: isExtraPlayer ? '4px' : '0',
-                                    margin: isExtraPlayer ? '1px 0' : '0'
+                                    margin: isExtraPlayer ? '1px 0' : '0',
+                                    position: 'relative'
                                   }}
                                 >
                                   <div style={{
@@ -502,7 +509,8 @@ const RegistrationList: React.FC<RegistrationListProps> = ({
                                     overflow: 'hidden',
                                     textOverflow: 'ellipsis',
                                     whiteSpace: 'nowrap',
-                                    color: isExtraPlayer ? '#d4380d' : 'inherit'
+                                    color: isExtraPlayer ? '#d4380d' : 'inherit',
+                                    paddingRight: isAdmin ? '24px' : '0'
                                   }}>
                                     {originalIndex + 1}. {player.name}
                                     {isExtraPlayer && (
@@ -517,6 +525,37 @@ const RegistrationList: React.FC<RegistrationListProps> = ({
                                       }}>
                                         VƯỢT
                                       </span>
+                                    )}
+
+                                    {/* Nút xóa người chơi - chỉ hiển thị cho admin */}
+                                    {isAdmin && onDeletePlayer && (
+                                      <Popconfirm
+                                        title="Xóa người chơi"
+                                        description={`Bạn có chắc chắn muốn xóa ${player.name}?`}
+                                        onConfirm={() => onDeletePlayer(registration.id, player.id)}
+                                        okText="Xóa"
+                                        cancelText="Hủy"
+                                        placement="topRight"
+                                      >
+                                        <Button
+                                          type="text"
+                                          danger
+                                          size="small"
+                                          icon={<DeleteOutlined />}
+                                          style={{
+                                            position: 'absolute',
+                                            right: '4px',
+                                            top: '2px',
+                                            width: '20px',
+                                            height: '20px',
+                                            padding: '0',
+                                            fontSize: '10px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center'
+                                          }}
+                                        />
+                                      </Popconfirm>
                                     )}
                                   </div>
                                   <div style={{

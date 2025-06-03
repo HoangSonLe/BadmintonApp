@@ -1,5 +1,5 @@
-import React from 'react';
-import { Card, Form, InputNumber, Button, Typography, message } from 'antd';
+import React, { useState } from 'react';
+import { Card, Form, InputNumber, Button, Typography } from 'antd';
 import { HomeOutlined, UserOutlined, DollarOutlined, ControlOutlined } from '@ant-design/icons';
 import type { AppSettings } from '../types';
 import CustomLabel from './CustomLabel';
@@ -8,15 +8,20 @@ const { Title } = Typography;
 
 interface SettingsProps {
   settings: AppSettings;
-  onSettingsChange: (settings: AppSettings) => void;
+  onSettingsChange: (settings: AppSettings) => Promise<void>;
 }
 
 const Settings: React.FC<SettingsProps> = ({ settings, onSettingsChange }) => {
   const [form] = Form.useForm();
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (values: AppSettings) => {
-    onSettingsChange(values);
-    message.success('Cài đặt đã được lưu thành công!');
+  const handleSubmit = async (values: AppSettings) => {
+    setLoading(true);
+    try {
+      await onSettingsChange(values);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -123,8 +128,14 @@ const Settings: React.FC<SettingsProps> = ({ settings, onSettingsChange }) => {
         </Form.Item>
 
         <Form.Item>
-          <Button type="primary" htmlType="submit" size="large" block>
-            Lưu cài đặt
+          <Button
+            type="primary"
+            htmlType="submit"
+            size="large"
+            block
+            loading={loading}
+          >
+            {loading ? 'Đang lưu...' : 'Lưu cài đặt'}
           </Button>
         </Form.Item>
       </Form>
