@@ -21,7 +21,6 @@ export interface SecurityEvent {
 }
 
 export class SecurityService {
-  private static readonly ADMIN_CODE = import.meta.env.VITE_ADMIN_CODE || 'admin123';
   private static readonly SESSION_DURATION = 24 * 60 * 60 * 1000; // 24 hours
   private static readonly MAX_LOGS = 100;
   private static readonly TOKEN_SECRET = 'badminton_secure_token_2024';
@@ -79,28 +78,40 @@ export class SecurityService {
   }
   
   /**
-   * Verify admin credentials
+   * Verify admin credentials using Firebase
    */
-  static verifyAdmin(adminCode: string): boolean {
+  static async verifyAdmin(adminCode: string): Promise<boolean> {
     if (!adminCode || typeof adminCode !== 'string') {
       this.logSecurityEvent('INVALID_ADMIN_ATTEMPT', { reason: 'Empty or invalid code' });
       return false;
     }
-    
-    const isValid = adminCode.trim() === this.ADMIN_CODE;
-    
-    if (!isValid) {
-      this.logSecurityEvent('FAILED_ADMIN_LOGIN', { 
-        attemptedCode: adminCode.substring(0, 3) + '***',
+
+    try {
+      // Get admin password from Firebase
+      const { FirestoreService } = await import('./firestoreService');
+      const adminPassword = await FirestoreService.getAdminPassword();
+      const isValid = adminCode.trim() === adminPassword;
+
+      if (!isValid) {
+        this.logSecurityEvent('FAILED_ADMIN_LOGIN', {
+          attemptedCode: adminCode.substring(0, 3) + '***',
+          timestamp: new Date().toISOString()
+        });
+      } else {
+        this.logSecurityEvent('SUCCESSFUL_ADMIN_LOGIN', {
+          timestamp: new Date().toISOString()
+        });
+      }
+
+      return isValid;
+    } catch (error) {
+      console.error('Error verifying admin credentials:', error);
+      this.logSecurityEvent('ADMIN_VERIFICATION_ERROR', {
+        error: (error as Error).message,
         timestamp: new Date().toISOString()
       });
-    } else {
-      this.logSecurityEvent('SUCCESSFUL_ADMIN_LOGIN', {
-        timestamp: new Date().toISOString()
-      });
+      return false;
     }
-    
-    return isValid;
   }
   
   /**
@@ -226,11 +237,19 @@ export class SecurityService {
   }
 
   /**
-   * Verify admin code (for password confirmation)
+   * Verify admin code (for password confirmation) using Firebase
    */
-  static verifyAdminCode(inputCode: string): boolean {
-    const adminCode = import.meta.env.VITE_ADMIN_CODE || 'admin123';
-    return inputCode === adminCode;
+  static async verifyAdminCode(inputCode: string): Promise<boolean> {
+    try {
+      const { FirestoreService } = await import('./firestoreService');
+      const adminPassword = await FirestoreService.getAdminPassword();
+      return inputCode === adminPassword;
+    } catch (error) {
+      console.error('Error verifying admin code:', error);
+      // Fallback to environment variable if Firebase fails
+      const adminCode = import.meta.env.VITE_ADMIN_CODE || 'admin123';
+      return inputCode === adminCode;
+    }
   }
 
   /**

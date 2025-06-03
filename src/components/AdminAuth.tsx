@@ -16,13 +16,15 @@ const AdminAuth: React.FC<AdminAuthProps> = ({ visible, onSuccess, onCancel }) =
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setLoading(true);
     setError('');
 
-    // Simulate authentication delay
-    setTimeout(() => {
-      if (SecurityService.verifyAdmin(adminCode.trim())) {
+    try {
+      // Verify admin credentials using Firebase
+      const isValid = await SecurityService.verifyAdmin(adminCode.trim());
+
+      if (isValid) {
         // Set admin session using SecurityService
         SecurityService.setAdminSession();
         onSuccess();
@@ -30,8 +32,12 @@ const AdminAuth: React.FC<AdminAuthProps> = ({ visible, onSuccess, onCancel }) =
       } else {
         setError('🚨 Mã admin không đúng! Hành động này đã được ghi lại.');
       }
+    } catch (error) {
+      console.error('Error during admin authentication:', error);
+      setError('🚨 Lỗi xác thực admin. Vui lòng thử lại.');
+    } finally {
       setLoading(false);
-    }, 500);
+    }
   };
 
   const handleCancel = () => {

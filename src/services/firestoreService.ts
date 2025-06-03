@@ -21,13 +21,15 @@ const COLLECTIONS = {
   REGISTRATIONS: 'registrations',
   METADATA: 'metadata',
   ADMIN_LOGS: 'admin_logs',
-  SECURITY_LOGS: 'security_logs'
+  SECURITY_LOGS: 'security_logs',
+  PASSWORD_ADMIN: 'passwordAdmin'
 } as const;
 
 // Document IDs
 const DOCUMENT_IDS = {
   APP_SETTINGS: 'app_settings',
-  APP_METADATA: 'app_metadata'
+  APP_METADATA: 'app_metadata',
+  PASSWORD_ADMIN: 'passwordAdmin'
 } as const;
 
 // Firestore data interfaces
@@ -35,6 +37,13 @@ interface FirestorePlayer {
   id: string;
   name: string;
   registeredAt: Timestamp;
+}
+
+export interface AdminConfig {
+  password: string;
+  createdAt: Timestamp;
+  lastUpdated: Timestamp;
+  version: string;
 }
 
 interface FirestoreRegistration {
@@ -86,6 +95,18 @@ export class FirestoreService {
           totalPlayers: 0
         };
         await setDoc(doc(db, COLLECTIONS.METADATA, DOCUMENT_IDS.APP_METADATA), defaultMetadata);
+      }
+
+      // Kiểm tra và tạo admin config mặc định
+      const adminConfigDoc = await getDoc(doc(db, COLLECTIONS.PASSWORD_ADMIN, DOCUMENT_IDS.PASSWORD_ADMIN));
+      if (!adminConfigDoc.exists()) {
+        const defaultAdminConfig: AdminConfig = {
+          password: import.meta.env.VITE_ADMIN_CODE || 'admin123',
+          createdAt: Timestamp.now(),
+          lastUpdated: Timestamp.now(),
+          version: '1.0.0'
+        };
+        await setDoc(doc(db, COLLECTIONS.PASSWORD_ADMIN, DOCUMENT_IDS.PASSWORD_ADMIN), defaultAdminConfig);
       }
     } catch (error) {
       console.error('Error initializing Firestore database:', error);
@@ -513,6 +534,97 @@ export class FirestoreService {
         error: (error as Error).message
       });
       throw new Error('Không thể xóa logs từ Firebase');
+    }
+  }
+
+  /**
+   * Lấy admin configuration từ Firebase
+   */
+  static async getAdminConfig(): Promise<AdminConfig> {
+    try {
+      const adminConfigDoc = await getDoc(doc(db, COLLECTIONS.PASSWORD_ADMIN, DOCUMENT_IDS.PASSWORD_ADMIN));
+
+      if (!adminConfigDoc.exists()) {
+        // Tạo config mặc định nếu chưa tồn tại
+        await this.initializeDatabase();
+        const defaultConfig: AdminConfig = {
+          password: import.meta.env.VITE_ADMIN_CODE || 'admin123',
+          createdAt: Timestamp.now(),
+          lastUpdated: Timestamp.now(),
+          version: '1.0.0'
+        };
+        return defaultConfig;
+      }
+
+      return adminConfigDoc.data() as AdminConfig;
+    } catch (error) {
+      console.error('Error getting admin config:', error);
+      throw new Error('Không thể lấy cấu hình admin từ Firestore');
+    }
+  }
+
+  /**
+   * Cập nhật admin configuration (Admin only)
+   */
+  static async updateAdminConfig(newConfig: Partial<AdminConfig>): Promise<void> {
+    // Validate admin permission
+    SecurityService.validateAdminAction('UPDATE_ADMIN_CONFIG');
+
+    try {
+      const currentConfig = await this.getAdminConfig();
+      const updatedConfig: AdminConfig = {
+        ...currentConfig,
+        ...newConfig,
+        lastUpdated: Timestamp.now()
+      };
+
+      await setDoc(doc(db, COLLECTIONS.PASSWORD_ADMIN, DOCUMENT_IDS.PASSWORD_ADMIN), updatedConfig);
+
+      SecurityService.logAdminAction('ADMIN_CONFIG_UPDATED', {
+        updatedFields: Object.keys(newConfig),
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error updating admin config:', error);
+      SecurityService.logAdminAction('ADMIN_CONFIG_UPDATE_FAILED', {
+        error: (error as Error).message,
+        newConfig
+      });
+      throw new Error('Không thể cập nhật cấu hình admin trong Firestore');
+    }
+  }
+
+  /**
+   * Lấy admin password từ Firebase
+   */
+  static async getAdminPassword(): Promise<string> {
+    try {
+      const adminConfig = await this.getAdminConfig();
+      return adminConfig.password;
+    } catch (error) {
+      console.error('Error getting admin password:', error);
+      // Fallback to environment variable if Firebase fails
+      return import.meta.env.VITE_ADMIN_CODE || 'admin123';
+    }
+  }
+
+  /**
+   * Cập nhật admin password (Admin only)
+   */
+  static async updateAdminPassword(newPassword: string): Promise<void> {
+    // Validate admin permission
+    SecurityService.validateAdminAction('UPDATE_ADMIN_PASSWORD');
+
+    try {
+      await this.updateAdminConfig({ password: newPassword });
+
+      SecurityService.logAdminAction('ADMIN_PASSWORD_UPDATED', {
+        timestamp: new Date().toISOString(),
+        passwordLength: newPassword.length
+      });
+    } catch (error) {
+      console.error('Error updating admin password:', error);
+      throw new Error('Không thể cập nhật mật khẩu admin');
     }
   }
 }

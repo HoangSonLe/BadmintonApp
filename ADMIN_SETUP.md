@@ -8,35 +8,50 @@
 - Demo database
 - Xóa đăng ký và người chơi
 
-## Cấu hình Admin Code
+## ⚡ Cập nhật mới: Firebase-based Admin Authentication
 
-### 1. Thiết lập Environment Variable
+### Thay đổi quan trọng
 
-Mã admin được lưu trong file `.env` với biến `VITE_ADMIN_CODE`:
+**Trước đây:** Mã admin được lưu trong environment variables (`.env` file)
+**Bây giờ:** Mã admin được lưu trữ an toàn trong Firebase với object `passwordAdmin`
+
+### Lợi ích của Firebase-based Authentication:
+- ✅ Bảo mật cao hơn (không expose trong client-side code)
+- ✅ Có thể thay đổi mật khẩu mà không cần restart server
+- ✅ Centralized configuration management
+- ✅ Fallback to environment variable nếu Firebase không khả dụng
+
+## Cấu hình Admin Password
+
+### 1. Khởi tạo mật khẩu mặc định
+
+Khi ứng dụng chạy lần đầu, hệ thống sẽ tự động tạo admin configuration trong Firebase với:
+- Mật khẩu mặc định từ `VITE_ADMIN_CODE` (nếu có) hoặc `admin123`
+- Timestamp tạo và cập nhật
+- Version tracking
+
+### 2. Thay đổi mật khẩu admin
+
+**Cách 1: Sử dụng Admin Config Manager (Khuyến nghị)**
+
+1. Đăng nhập với quyền admin
+2. Truy cập tab "Admin Config" (nếu có)
+3. Sử dụng component AdminConfigManager để cập nhật mật khẩu
+
+**Cách 2: Thông qua Firebase Console**
+
+1. Truy cập Firebase Console
+2. Vào Firestore Database
+3. Tìm collection `admin_config`
+4. Cập nhật field `passwordAdmin` trong document `admin_config`
+
+**Cách 3: Environment Variable (Fallback)**
+
+Nếu Firebase không khả dụng, hệ thống sẽ fallback về environment variable:
 
 ```bash
-# Admin Authentication
+# Admin Authentication (Fallback)
 VITE_ADMIN_CODE=your_secure_admin_code_here
-```
-
-### 2. Thay đổi mã admin
-
-**Bước 1:** Mở file `.env` trong thư mục gốc của project
-
-**Bước 2:** Tìm dòng `VITE_ADMIN_CODE` và thay đổi giá trị:
-
-```bash
-# Thay đổi từ:
-VITE_ADMIN_CODE=admin123
-
-# Thành mã bảo mật của bạn:
-VITE_ADMIN_CODE=MySecureAdminCode2024!
-```
-
-**Bước 3:** Restart server development:
-
-```bash
-npm run dev
 ```
 
 ### 3. Sử dụng Admin Code

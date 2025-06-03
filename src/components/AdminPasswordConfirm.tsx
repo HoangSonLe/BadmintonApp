@@ -34,8 +34,8 @@ const AdminPasswordConfirm: React.FC<AdminPasswordConfirmProps> = ({
     setError('');
 
     try {
-      // Verify admin password
-      const isValid = SecurityService.verifyAdminCode(password);
+      // Verify admin password using Firebase
+      const isValid = await SecurityService.verifyAdminCode(password);
       
       if (isValid) {
         // Log the password verification

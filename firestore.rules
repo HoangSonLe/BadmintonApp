@@ -71,7 +71,16 @@ service cloud.firestore {
       // Only admin can read/delete security logs
       allow read, delete: if isAdmin();
     }
-    
+
+    // Admin password collection
+    match /passwordAdmin/{document} {
+      // Allow read for all users (needed for admin authentication)
+      allow read: if true;
+
+      // Only admin can write admin config
+      allow write: if isAdmin();
+    }
+
     // Deny all other access
     match /{document=**} {
       allow read, write: if false;
