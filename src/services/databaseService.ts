@@ -1,6 +1,6 @@
 import type { AppSettings, WeeklyRegistration } from '../types';
 import { FirestoreService } from './firestoreService';
-import { StorageService, STORAGE_KEYS } from '../config/storageKeys';
+import { StorageService } from '../config/storageKeys';
 
 // Database structure interface
 export interface DatabaseSchema {
@@ -306,7 +306,7 @@ export class DatabaseService {
       await FirestoreService.resetDatabase();
     } catch (error) {
       console.error('Error resetting Firestore database, falling back to localStorage:', error);
-      localStorage.setItem(DB_KEY, JSON.stringify(DEFAULT_DATABASE));
+      StorageService.setItem('DATABASE', JSON.stringify(DEFAULT_DATABASE));
     }
   }
 

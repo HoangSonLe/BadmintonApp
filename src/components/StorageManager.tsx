@@ -260,7 +260,7 @@ const StorageManager: React.FC = () => {
       >
         <Table
           columns={columns}
-          dataSource={storageData.map((item, index) => ({ ...item, key: index }))}
+          dataSource={storageData.map((item, index) => ({ ...item, key: `${item.key}-${index}` }))}
           pagination={false}
           size="small"
         />
