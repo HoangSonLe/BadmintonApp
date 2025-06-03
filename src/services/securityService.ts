@@ -10,6 +10,14 @@ export interface AdminAction {
   sessionId: string | null;
 }
 
+export interface SecurityEvent {
+  event: string;
+  details?: Record<string, unknown>;
+  timestamp: string;
+  userAgent: string;
+  url: string;
+}
+
 export class SecurityService {
   private static readonly ADMIN_CODE = import.meta.env.VITE_ADMIN_CODE || 'admin123';
   private static readonly SESSION_DURATION = 24 * 60 * 60 * 1000; // 24 hours
@@ -123,45 +131,70 @@ export class SecurityService {
       userAgent: navigator.userAgent,
       sessionId: localStorage.getItem('adminAuthTime')
     };
-    
+
     console.log('🔐 Admin Action:', logEntry);
-    
-    // Store in localStorage for debugging (in production, send to server)
+
+    // Store in localStorage for debugging
     const logs = this.getAdminLogs();
     logs.push(logEntry);
-    
+
     // Keep only last MAX_LOGS logs
     if (logs.length > this.MAX_LOGS) {
       logs.splice(0, logs.length - this.MAX_LOGS);
     }
-    
+
     localStorage.setItem('adminLogs', JSON.stringify(logs));
+
+    // Also save to Firebase (async, don't wait)
+    this.saveToFirebase('admin', logEntry);
   }
   
   /**
    * Log security events
    */
   static logSecurityEvent(event: string, details?: Record<string, unknown>): void {
-    const logEntry = {
+    const logEntry: SecurityEvent = {
       event,
       details,
       timestamp: new Date().toISOString(),
       userAgent: navigator.userAgent,
       url: window.location.href
     };
-    
+
     console.warn('🚨 Security Event:', logEntry);
-    
+
     // Store security events separately
     const securityLogs = this.getSecurityLogs();
     securityLogs.push(logEntry);
-    
+
     // Keep only last MAX_LOGS security events
     if (securityLogs.length > this.MAX_LOGS) {
       securityLogs.splice(0, securityLogs.length - this.MAX_LOGS);
     }
-    
+
     localStorage.setItem('securityLogs', JSON.stringify(securityLogs));
+
+    // Also save to Firebase (async, don't wait)
+    this.saveToFirebase('security', logEntry);
+  }
+
+  /**
+   * Save logs to Firebase (async, non-blocking)
+   */
+  private static async saveToFirebase(type: 'admin' | 'security', logEntry: AdminAction | SecurityEvent): Promise<void> {
+    try {
+      // Dynamic import to avoid circular dependency
+      const { FirestoreService } = await import('./firestoreService');
+
+      if (type === 'admin') {
+        await FirestoreService.saveAdminLog(logEntry as AdminAction);
+      } else {
+        await FirestoreService.saveSecurityLog(logEntry as SecurityEvent);
+      }
+    } catch (error) {
+      console.error('Failed to save log to Firebase:', error);
+      // Don't throw error to prevent breaking the main functionality
+    }
   }
   
   /**
@@ -178,7 +211,7 @@ export class SecurityService {
   /**
    * Get security logs
    */
-  static getSecurityLogs(): Array<Record<string, unknown>> {
+  static getSecurityLogs(): SecurityEvent[] {
     try {
       return JSON.parse(localStorage.getItem('securityLogs') || '[]');
     } catch {

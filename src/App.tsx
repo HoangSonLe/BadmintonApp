@@ -13,6 +13,8 @@ import SecurityDashboard from './components/SecurityDashboard';
 import AdminAuth from './components/AdminAuth';
 import { DatabaseService } from './services/databaseService';
 import { SecurityService } from './services/securityService';
+import { RegistrationLogger } from './services/registrationLogger';
+import { DateUtils } from './utils/dateUtils';
 
 const { Header, Content } = Layout;
 const { Title } = Typography;
@@ -94,16 +96,12 @@ function App() {
   const findNextWeekRegistration = (registrations: WeeklyRegistrationType[]): WeeklyRegistrationType | null => {
     if (registrations.length === 0) return null;
 
-    // Calculate next week dates (same logic as WeeklyRegistration)
-    const nextWeek = dayjs().add(1, 'week').startOf('week').add(1, 'day'); // Monday của tuần tiếp theo
-    const nextWeekStart = nextWeek.toDate();
-    const nextWeekEnd = nextWeek.endOf('week').add(1, 'day').toDate(); // Sunday
+    // Calculate next week dates using DateUtils for consistency
+    const nextWeekDates = DateUtils.getNextWeekDates();
 
     // Find registration for next week
     return registrations.find(reg => {
-      const regStart = new Date(reg.weekStart);
-      const regEnd = new Date(reg.weekEnd);
-      return regStart.getTime() === nextWeekStart.getTime() && regEnd.getTime() === nextWeekEnd.getTime();
+      return DateUtils.isSameWeek(reg.weekStart, reg.weekEnd, nextWeekDates.start, nextWeekDates.end);
     }) || null;
   };
 
@@ -192,9 +190,7 @@ function App() {
   // Check if registration exists for the same week
   const findExistingRegistrationForWeek = (weekStart: Date, weekEnd: Date): WeeklyRegistrationType | null => {
     return registrations.find(reg => {
-      const regStart = new Date(reg.weekStart);
-      const regEnd = new Date(reg.weekEnd);
-      return regStart.getTime() === weekStart.getTime() && regEnd.getTime() === weekEnd.getTime();
+      return DateUtils.isSameWeek(reg.weekStart, reg.weekEnd, weekStart, weekEnd);
     }) || null;
   };
 
@@ -215,10 +211,13 @@ function App() {
           .map(p => p.name);
 
         if (newPlayers.length === 0) {
+          // Log duplicate names detected
+          RegistrationLogger.logDuplicateNamesDetected(duplicateNames, existingRegistration.id);
           message.warning(`Tất cả người chơi đã được đăng ký cho tuần này rồi! Tên trùng: ${duplicateNames.join(', ')}`);
           return;
         } else if (duplicateNames.length > 0) {
           // Có một số tên trùng và một số tên mới
+          RegistrationLogger.logDuplicateNamesDetected(duplicateNames, existingRegistration.id);
           message.info(`Tên đã tồn tại: ${duplicateNames.join(', ')}. Chỉ thêm những người chưa đăng ký.`);
         }
 
@@ -243,6 +242,9 @@ function App() {
         const summary = calculateSummary(updatedRegistration);
         setCurrentSummary(summary);
 
+        // Log players added to existing registration
+        RegistrationLogger.logPlayersAdded(existingRegistration.id, newPlayers, updatedRegistration.players.length);
+
         message.success(`Đã thêm ${newPlayers.length} người vào đăng ký tuần này! Tổng cộng: ${updatedRegistration.players.length} người`);
       } else {
         // Create new registration
@@ -256,9 +258,17 @@ function App() {
         const summary = calculateSummary(registration);
         setCurrentSummary(summary);
 
+        // Log new registration created
+        RegistrationLogger.logNewRegistration(registration);
+
         message.success('Đăng ký đã được lưu vào database Firestore!');
       }
     } catch (error) {
+      // Log registration error
+      RegistrationLogger.logRegistrationError('SAVE_REGISTRATION', (error as Error).message, {
+        registrationId: registration.id,
+        playersCount: registration.players.length
+      });
       message.error('Lỗi khi lưu đăng ký: ' + (error as Error).message);
     }
   };
@@ -266,6 +276,9 @@ function App() {
   // Handle registration deletion
   const handleDeleteRegistration = async (id: string) => {
     try {
+      // Find the registration before deleting for logging
+      const registrationToDelete = registrations.find(reg => reg.id === id);
+
       await DatabaseService.deleteRegistration(id);
       const newRegistrations = registrations.filter(reg => reg.id !== id);
       setRegistrations(newRegistrations);
@@ -273,8 +286,21 @@ function App() {
       // Update summary after deletion
       setCurrentSummary(calculateSummaryFromFirebase(newRegistrations, settings));
 
+      // Log registration deletion
+      if (registrationToDelete) {
+        RegistrationLogger.logRegistrationDeleted(
+          id,
+          registrationToDelete.players.length,
+          registrationToDelete.players.map(p => p.name)
+        );
+      }
+
       message.success('Đã xóa đăng ký khỏi database Firestore!');
     } catch (error) {
+      // Log deletion error
+      RegistrationLogger.logRegistrationError('DELETE_REGISTRATION', (error as Error).message, {
+        registrationId: id
+      });
       message.error('Lỗi khi xóa đăng ký: ' + (error as Error).message);
     }
   };
@@ -317,8 +343,24 @@ function App() {
       setCurrentSummary(calculateSummaryFromFirebase(newRegistrations, settings));
 
       const deletedPlayer = registration.players.find(p => p.id === playerId);
+
+      // Log successful player deletion
+      if (deletedPlayer) {
+        RegistrationLogger.logRegistrationUpdated(registrationId, {
+          action: 'PLAYER_REMOVED_FROM_REGISTRATION',
+          removedPlayer: deletedPlayer.name,
+          remainingPlayersCount: updatedPlayers.length,
+          remainingPlayerNames: updatedPlayers.map(p => p.name)
+        });
+      }
+
       message.success(`Đã xóa ${deletedPlayer?.name} khỏi đăng ký!`);
     } catch (error) {
+      // Log player deletion error
+      RegistrationLogger.logRegistrationError('DELETE_PLAYER', (error as Error).message, {
+        registrationId,
+        playerId
+      });
       message.error('Lỗi khi xóa người chơi: ' + (error as Error).message);
     }
   };

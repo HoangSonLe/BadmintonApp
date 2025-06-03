@@ -263,22 +263,25 @@ const DataManager: React.FC<DataManagerProps> = ({
             >
               Tải lại trang
             </Button>
-            <Button
-              danger
-              onClick={() => {
-                confirm({
-                  title: 'Xác nhận reset database',
-                  content: 'Bạn có chắc chắn muốn reset database về trạng thái mặc định? Tất cả dữ liệu sẽ bị xóa.',
-                  onOk: async () => {
-                    await DatabaseService.resetDatabase();
-                    await loadStats();
-                    message.success('Database đã được reset!');
-                  }
-                });
-              }}
-            >
-              Reset Database
-            </Button>
+            {/* Reset Database button hidden for safety */}
+            {false && (
+              <Button
+                danger
+                onClick={() => {
+                  confirm({
+                    title: 'Xác nhận reset database',
+                    content: 'Bạn có chắc chắn muốn reset database về trạng thái mặc định? Tất cả dữ liệu sẽ bị xóa.',
+                    onOk: async () => {
+                      await DatabaseService.resetDatabase();
+                      await loadStats();
+                      message.success('Database đã được reset!');
+                    }
+                  });
+                }}
+              >
+                Reset Database
+              </Button>
+            )}
           </Space>
         </div>
 

@@ -5,6 +5,8 @@ import dayjs from 'dayjs';
 import weekOfYear from 'dayjs/plugin/weekOfYear';
 import type { WeeklyRegistration as WeeklyRegistrationType, Player, AppSettings } from '../types';
 import CustomLabel from './CustomLabel';
+import { RegistrationLogger } from '../services/registrationLogger';
+import { DateUtils } from '../utils/dateUtils';
 
 dayjs.extend(weekOfYear);
 
@@ -28,25 +30,16 @@ const WeeklyRegistration: React.FC<WeeklyRegistrationProps> = ({
   const [players, setPlayers] = useState<Player[]>([]);
 
   // Tự động lấy tuần tiếp theo (tuần sau tuần hiện tại)
-  const nextWeek = useMemo(() => {
-    return dayjs().add(1, 'week').startOf('week').add(1, 'day'); // Monday của tuần tiếp theo
+  const nextWeekDates = useMemo(() => {
+    return DateUtils.getNextWeekDates();
   }, []);
-
-  const getWeekDates = (weekDate: dayjs.Dayjs) => {
-    const start = weekDate.startOf('week').add(1, 'day'); // Monday
-    const end = weekDate.endOf('week').add(1, 'day'); // Sunday
-    return { start: start.toDate(), end: end.toDate() };
-  };
 
   // Tìm đăng ký hiện có cho tuần tiếp theo
   const existingRegistration = useMemo(() => {
-    const { start, end } = getWeekDates(nextWeek);
     return registrations.find(reg => {
-      const regStart = new Date(reg.weekStart);
-      const regEnd = new Date(reg.weekEnd);
-      return regStart.getTime() === start.getTime() && regEnd.getTime() === end.getTime();
+      return DateUtils.isSameWeek(reg.weekStart, reg.weekEnd, nextWeekDates.start, nextWeekDates.end);
     }) || null;
-  }, [registrations, nextWeek]);
+  }, [registrations, nextWeekDates]);
 
   // Tính toán thông tin phí khi số người thay đổi (bao gồm cả người đã đăng ký trước đó)
   const registrationSummary = useMemo(() => {
@@ -99,6 +92,13 @@ const WeeklyRegistration: React.FC<WeeklyRegistrationProps> = ({
   }, [players]);
 
   const addPlayer = () => {
+    // Check if registration is disabled
+    if (!settings.registrationEnabled) {
+      RegistrationLogger.logRegistrationAttemptWhenDisabled(playerName.trim());
+      message.warning('Đăng ký hiện đang bị khóa!');
+      return;
+    }
+
     if (playerName.trim()) {
       const trimmedName = playerName.trim();
 
@@ -139,11 +139,10 @@ const WeeklyRegistration: React.FC<WeeklyRegistrationProps> = ({
 
   const handleSubmit = () => {
     if (players.length > 0) {
-      const { start, end } = getWeekDates(nextWeek);
       const registration: WeeklyRegistrationType = {
         id: Date.now().toString(),
-        weekStart: start,
-        weekEnd: end,
+        weekStart: nextWeekDates.start,
+        weekEnd: nextWeekDates.end,
         players: players,
         settings: { ...settings }
       };
@@ -193,7 +192,7 @@ const WeeklyRegistration: React.FC<WeeklyRegistrationProps> = ({
             Tuần đăng ký
           </CustomLabel>
           <Alert
-            message={`Đăng ký cho tuần: ${formatDate(nextWeek)} - ${formatDate(nextWeek.endOf('week').add(1, 'day'))}`}
+            message={`Đăng ký cho tuần: ${DateUtils.formatWeekRange(nextWeekDates.start, nextWeekDates.end)}`}
             description={
               <div style={{ marginTop: '8px', fontSize: '14px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>

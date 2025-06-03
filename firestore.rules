@@ -54,19 +54,22 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
     
-    // Admin logs collection (if implemented in future)
+    // Admin logs collection
     match /admin_logs/{document} {
-      // Only admin can read/write admin logs
-      allow read, write: if isAdmin();
-    }
-    
-    // Security logs collection (if implemented in future)
-    match /security_logs/{document} {
-      // Only admin can read security logs
-      allow read: if isAdmin();
-      
-      // Allow system to write security logs
+      // Allow create for all users (system logging)
       allow create: if true;
+
+      // Only admin can read/delete admin logs
+      allow read, delete: if isAdmin();
+    }
+
+    // Security logs collection
+    match /security_logs/{document} {
+      // Allow create for all users (system logging)
+      allow create: if true;
+
+      // Only admin can read/delete security logs
+      allow read, delete: if isAdmin();
     }
     
     // Deny all other access

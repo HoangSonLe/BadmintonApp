@@ -3,6 +3,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  addDoc,
   setDoc,
   deleteDoc,
   query,
@@ -18,7 +19,9 @@ import { SecurityService } from './securityService';
 const COLLECTIONS = {
   SETTINGS: 'settings',
   REGISTRATIONS: 'registrations',
-  METADATA: 'metadata'
+  METADATA: 'metadata',
+  ADMIN_LOGS: 'admin_logs',
+  SECURITY_LOGS: 'security_logs'
 } as const;
 
 // Document IDs
@@ -378,7 +381,7 @@ export class FirestoreService {
     try {
       const metadata = await this.getMetadata();
       const registrations = await this.getRegistrations();
-      
+
       return {
         totalRegistrations: registrations.length,
         totalPlayers: registrations.reduce((total, reg) => total + reg.players.length, 0),
@@ -388,6 +391,128 @@ export class FirestoreService {
     } catch (error) {
       console.error('Error getting stats:', error);
       throw new Error('Không thể lấy thống kê từ Firestore');
+    }
+  }
+
+  /**
+   * Lưu admin log lên Firebase
+   */
+  static async saveAdminLog(logData: {
+    action: string;
+    details?: Record<string, unknown>;
+    timestamp: string;
+    userAgent: string;
+    sessionId: string | null;
+  }): Promise<void> {
+    try {
+      await addDoc(collection(db, COLLECTIONS.ADMIN_LOGS), {
+        ...logData,
+        createdAt: Timestamp.now(),
+        type: 'admin_action'
+      });
+    } catch (error) {
+      console.error('Error saving admin log to Firebase:', error);
+      // Don't throw error to prevent breaking the main functionality
+    }
+  }
+
+  /**
+   * Lưu security log lên Firebase
+   */
+  static async saveSecurityLog(logData: {
+    event: string;
+    details?: Record<string, unknown>;
+    timestamp: string;
+    userAgent: string;
+    url: string;
+  }): Promise<void> {
+    try {
+      await addDoc(collection(db, COLLECTIONS.SECURITY_LOGS), {
+        ...logData,
+        createdAt: Timestamp.now(),
+        type: 'security_event'
+      });
+    } catch (error) {
+      console.error('Error saving security log to Firebase:', error);
+      // Don't throw error to prevent breaking the main functionality
+    }
+  }
+
+  /**
+   * Lấy admin logs từ Firebase
+   */
+  static async getAdminLogsFromFirebase(): Promise<any[]> {
+    try {
+      const q = query(
+        collection(db, COLLECTIONS.ADMIN_LOGS),
+        orderBy('createdAt', 'desc')
+      );
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+    } catch (error) {
+      console.error('Error getting admin logs from Firebase:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Lấy security logs từ Firebase
+   */
+  static async getSecurityLogsFromFirebase(): Promise<any[]> {
+    try {
+      const q = query(
+        collection(db, COLLECTIONS.SECURITY_LOGS),
+        orderBy('createdAt', 'desc')
+      );
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+    } catch (error) {
+      console.error('Error getting security logs from Firebase:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Xóa tất cả logs từ Firebase (Admin only)
+   */
+  static async clearAllLogsFromFirebase(): Promise<void> {
+    // Validate admin permission
+    SecurityService.validateAdminAction('CLEAR_FIREBASE_LOGS');
+
+    try {
+      const batch = writeBatch(db);
+
+      // Delete all admin logs
+      const adminLogsSnapshot = await getDocs(collection(db, COLLECTIONS.ADMIN_LOGS));
+      adminLogsSnapshot.forEach((doc) => {
+        batch.delete(doc.ref);
+      });
+
+      // Delete all security logs
+      const securityLogsSnapshot = await getDocs(collection(db, COLLECTIONS.SECURITY_LOGS));
+      securityLogsSnapshot.forEach((doc) => {
+        batch.delete(doc.ref);
+      });
+
+      await batch.commit();
+
+      SecurityService.logAdminAction('FIREBASE_LOGS_CLEARED', {
+        adminLogsCount: adminLogsSnapshot.size,
+        securityLogsCount: securityLogsSnapshot.size,
+        clearedAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error clearing logs from Firebase:', error);
+      SecurityService.logAdminAction('FIREBASE_LOGS_CLEAR_FAILED', {
+        error: (error as Error).message
+      });
+      throw new Error('Không thể xóa logs từ Firebase');
     }
   }
 }

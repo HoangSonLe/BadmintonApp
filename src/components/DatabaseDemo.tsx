@@ -156,25 +156,28 @@ const DatabaseDemo: React.FC = () => {
               Xuất Database
             </Button>
 
-            <Button
-              danger
-              onClick={async () => {
-                try {
-                  setLoading(true);
-                  await DatabaseService.resetDatabase();
-                  await refreshStats();
-                  message.success('Đã reset database!');
-                } catch (error) {
-                  message.error('Lỗi khi reset database: ' + (error as Error).message);
-                } finally {
-                  setLoading(false);
-                }
-              }}
-              loading={loading}
-              disabled={loading}
-            >
-              Reset Database
-            </Button>
+            {/* Reset Database button hidden for safety */}
+            {false && (
+              <Button
+                danger
+                onClick={async () => {
+                  try {
+                    setLoading(true);
+                    await DatabaseService.resetDatabase();
+                    await refreshStats();
+                    message.success('Đã reset database!');
+                  } catch (error) {
+                    message.error('Lỗi khi reset database: ' + (error as Error).message);
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                loading={loading}
+                disabled={loading}
+              >
+                Reset Database
+              </Button>
+            )}
           </Space>
         </div>
 
