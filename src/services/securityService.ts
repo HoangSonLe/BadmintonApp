@@ -78,7 +78,21 @@ export class SecurityService {
   }
   
   /**
-   * Verify admin credentials using Firebase
+   * Hash password using SHA-256 with obfuscated salt
+   */
+  private static async hashPassword(password: string): Promise<string> {
+    const encoder = new TextEncoder();
+    // Obfuscated salt - harder to identify in minified code
+    const saltParts = ['badminton', 'admin', 'salt', '2024'];
+    const salt = saltParts.join('_');
+    const data = encoder.encode(password + salt);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  /**
+   * Verify admin credentials using Firebase with secure hashing
    */
   static async verifyAdmin(adminCode: string): Promise<boolean> {
     if (!adminCode || typeof adminCode !== 'string') {
@@ -87,14 +101,18 @@ export class SecurityService {
     }
 
     try {
-      // Get admin password from Firebase
+      // Hash the input code for secure comparison
+      const inputHash = await this.hashPassword(adminCode.trim());
+
+      // Get admin password hash from Firebase
       const { FirestoreService } = await import('./firestoreService');
-      const adminPassword = await FirestoreService.getAdminPassword();
-      const isValid = adminCode.trim() === adminPassword;
+      const storedHash = await FirestoreService.getAdminPasswordHash();
+
+      const isValid = inputHash === storedHash;
 
       if (!isValid) {
         this.logSecurityEvent('FAILED_ADMIN_LOGIN', {
-          attemptedCode: adminCode.substring(0, 3) + '***',
+          attemptedCodeHash: inputHash.substring(0, 8) + '***',
           timestamp: new Date().toISOString()
         });
       } else {
@@ -237,13 +255,18 @@ export class SecurityService {
   }
 
   /**
-   * Verify admin code (for password confirmation) using Firebase
+   * Verify admin code (for password confirmation) using Firebase with secure hashing
    */
   static async verifyAdminCode(inputCode: string): Promise<boolean> {
     try {
+      // Hash the input code for secure comparison
+      const inputHash = await this.hashPassword(inputCode);
+
+      // Get admin password hash from Firebase
       const { FirestoreService } = await import('./firestoreService');
-      const adminPassword = await FirestoreService.getAdminPassword();
-      return inputCode === adminPassword;
+      const storedHash = await FirestoreService.getAdminPasswordHash();
+
+      return inputHash === storedHash;
     } catch (error) {
       console.error('Error verifying admin code:', error);
       // Fallback to environment variable if Firebase fails

@@ -10,6 +10,7 @@ import DataManager from './components/DataManager';
 import DatabaseDemo from './components/DatabaseDemo';
 import SecurityDashboard from './components/SecurityDashboard';
 import StorageManager from './components/StorageManager';
+import AdminConfigManager from './components/AdminConfigManager';
 import AdminAuth from './components/AdminAuth';
 import AdminLoginButton from './components/AdminLoginButton';
 import { DatabaseService } from './services/databaseService';
@@ -578,6 +579,16 @@ function App() {
         </span>
       ),
       children: <StorageManager />,
+    },
+    {
+      key: 'admin-config',
+      label: (
+        <span>
+          🔧
+          Cấu hình Admin
+        </span>
+      ),
+      children: <AdminConfigManager />,
     },
   ] : [];
 

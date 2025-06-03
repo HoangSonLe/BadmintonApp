@@ -41,6 +41,7 @@ interface FirestorePlayer {
 
 export interface AdminConfig {
   password: string;
+  passwordHash: string;
   createdAt: Timestamp;
   lastUpdated: Timestamp;
   version: string;
@@ -66,7 +67,21 @@ interface FirestoreMetadata {
  * Firestore Service - Quản lý dữ liệu trên Cloud Firestore
  */
 export class FirestoreService {
-  
+
+  /**
+   * Hash password using SHA-256 with obfuscated salt
+   */
+  private static async hashPassword(password: string): Promise<string> {
+    const encoder = new TextEncoder();
+    // Obfuscated salt - harder to identify in minified code
+    const saltParts = ['badminton', 'admin', 'salt', '2024'];
+    const salt = saltParts.join('_');
+    const data = encoder.encode(password + salt);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
   /**
    * Khởi tạo dữ liệu mặc định nếu chưa tồn tại
    */
@@ -100,8 +115,12 @@ export class FirestoreService {
       // Kiểm tra và tạo admin config mặc định
       const adminConfigDoc = await getDoc(doc(db, COLLECTIONS.PASSWORD_ADMIN, DOCUMENT_IDS.PASSWORD_ADMIN));
       if (!adminConfigDoc.exists()) {
+        const defaultPassword = import.meta.env.VITE_ADMIN_CODE || 'admin123';
+        const defaultPasswordHash = await this.hashPassword(defaultPassword);
+
         const defaultAdminConfig: AdminConfig = {
-          password: import.meta.env.VITE_ADMIN_CODE || 'admin123',
+          password: defaultPassword,
+          passwordHash: defaultPasswordHash,
           createdAt: Timestamp.now(),
           lastUpdated: Timestamp.now(),
           version: '1.0.0'
@@ -547,8 +566,12 @@ export class FirestoreService {
       if (!adminConfigDoc.exists()) {
         // Tạo config mặc định nếu chưa tồn tại
         await this.initializeDatabase();
+        const defaultPassword = import.meta.env.VITE_ADMIN_CODE || 'admin123';
+        const defaultPasswordHash = await this.hashPassword(defaultPassword);
+
         const defaultConfig: AdminConfig = {
-          password: import.meta.env.VITE_ADMIN_CODE || 'admin123',
+          password: defaultPassword,
+          passwordHash: defaultPasswordHash,
           createdAt: Timestamp.now(),
           lastUpdated: Timestamp.now(),
           version: '1.0.0'
@@ -609,6 +632,21 @@ export class FirestoreService {
   }
 
   /**
+   * Lấy admin password hash từ Firebase
+   */
+  static async getAdminPasswordHash(): Promise<string> {
+    try {
+      const adminConfig = await this.getAdminConfig();
+      return adminConfig.passwordHash;
+    } catch (error) {
+      console.error('Error getting admin password hash:', error);
+      // Fallback to hashing environment variable if Firebase fails
+      const fallbackPassword = import.meta.env.VITE_ADMIN_CODE || 'admin123';
+      return await this.hashPassword(fallbackPassword);
+    }
+  }
+
+  /**
    * Cập nhật admin password (Admin only)
    */
   static async updateAdminPassword(newPassword: string): Promise<void> {
@@ -616,7 +654,11 @@ export class FirestoreService {
     SecurityService.validateAdminAction('UPDATE_ADMIN_PASSWORD');
 
     try {
-      await this.updateAdminConfig({ password: newPassword });
+      const newPasswordHash = await this.hashPassword(newPassword);
+      await this.updateAdminConfig({
+        password: newPassword,
+        passwordHash: newPasswordHash
+      });
 
       SecurityService.logAdminAction('ADMIN_PASSWORD_UPDATED', {
         timestamp: new Date().toISOString(),
