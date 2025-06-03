@@ -40,7 +40,6 @@ interface FirestorePlayer {
 }
 
 export interface AdminConfig {
-  password: string;
   passwordHash: string;
   createdAt: Timestamp;
   lastUpdated: Timestamp;
@@ -119,7 +118,6 @@ export class FirestoreService {
         const defaultPasswordHash = await this.hashPassword(defaultPassword);
 
         const defaultAdminConfig: AdminConfig = {
-          password: defaultPassword,
           passwordHash: defaultPasswordHash,
           createdAt: Timestamp.now(),
           lastUpdated: Timestamp.now(),
@@ -127,6 +125,9 @@ export class FirestoreService {
         };
         await setDoc(doc(db, COLLECTIONS.PASSWORD_ADMIN, DOCUMENT_IDS.PASSWORD_ADMIN), defaultAdminConfig);
       }
+
+      // Run migration to remove password fields from existing documents
+      await this.migrateRemovePasswordField();
     } catch (error) {
       console.error('Error initializing Firestore database:', error);
       throw new Error('Không thể khởi tạo database Firestore');
@@ -203,11 +204,17 @@ export class FirestoreService {
   private static convertFromFirestoreRegistration(firestoreReg: any): WeeklyRegistration {
     return {
       ...firestoreReg,
-      weekStart: firestoreReg.weekStart.toDate(),
-      weekEnd: firestoreReg.weekEnd.toDate(),
+      weekStart: firestoreReg.weekStart && firestoreReg.weekStart.toDate ?
+        firestoreReg.weekStart.toDate() :
+        new Date(),
+      weekEnd: firestoreReg.weekEnd && firestoreReg.weekEnd.toDate ?
+        firestoreReg.weekEnd.toDate() :
+        new Date(),
       players: firestoreReg.players.map((player: any) => ({
         ...player,
-        registeredAt: player.registeredAt.toDate()
+        registeredAt: player.registeredAt && player.registeredAt.toDate ?
+          player.registeredAt.toDate() :
+          new Date()
       }))
     };
   }
@@ -345,8 +352,12 @@ export class FirestoreService {
       const data = metadataDoc.data() as FirestoreMetadata;
       return {
         version: data.version,
-        createdAt: data.createdAt.toDate().toISOString(),
-        lastUpdated: data.lastUpdated.toDate().toISOString(),
+        createdAt: data.createdAt && data.createdAt.toDate ?
+          data.createdAt.toDate().toISOString() :
+          new Date().toISOString(),
+        lastUpdated: data.lastUpdated && data.lastUpdated.toDate ?
+          data.lastUpdated.toDate().toISOString() :
+          new Date().toISOString(),
         totalRegistrations: data.totalRegistrations,
         totalPlayers: data.totalPlayers
       };
@@ -570,16 +581,34 @@ export class FirestoreService {
         const defaultPasswordHash = await this.hashPassword(defaultPassword);
 
         const defaultConfig: AdminConfig = {
-          password: defaultPassword,
           passwordHash: defaultPasswordHash,
           createdAt: Timestamp.now(),
           lastUpdated: Timestamp.now(),
           version: '1.0.0'
         };
+
+        // Lưu config mặc định vào Firebase
+        await setDoc(doc(db, COLLECTIONS.PASSWORD_ADMIN, DOCUMENT_IDS.PASSWORD_ADMIN), defaultConfig);
         return defaultConfig;
       }
 
-      return adminConfigDoc.data() as AdminConfig;
+      const data = adminConfigDoc.data() as AdminConfig;
+
+      // Đảm bảo các trường timestamp tồn tại
+      if (!data.createdAt || !data.lastUpdated) {
+        const now = Timestamp.now();
+        const updatedData: AdminConfig = {
+          ...data,
+          createdAt: data.createdAt || now,
+          lastUpdated: data.lastUpdated || now
+        };
+
+        // Cập nhật document với các trường bị thiếu
+        await setDoc(doc(db, COLLECTIONS.PASSWORD_ADMIN, DOCUMENT_IDS.PASSWORD_ADMIN), updatedData);
+        return updatedData;
+      }
+
+      return data;
     } catch (error) {
       console.error('Error getting admin config:', error);
       throw new Error('Không thể lấy cấu hình admin từ Firestore');
@@ -618,12 +647,13 @@ export class FirestoreService {
   }
 
   /**
-   * Lấy admin password từ Firebase
+   * Lấy admin password từ Firebase (deprecated - chỉ dùng cho fallback)
    */
   static async getAdminPassword(): Promise<string> {
     try {
-      const adminConfig = await this.getAdminConfig();
-      return adminConfig.password;
+      // Không còn lưu password trong Firebase, chỉ fallback to environment variable
+      console.warn('getAdminPassword is deprecated - plain text passwords are no longer stored in Firebase');
+      return import.meta.env.VITE_ADMIN_CODE || 'admin123';
     } catch (error) {
       console.error('Error getting admin password:', error);
       // Fallback to environment variable if Firebase fails
@@ -656,7 +686,6 @@ export class FirestoreService {
     try {
       const newPasswordHash = await this.hashPassword(newPassword);
       await this.updateAdminConfig({
-        password: newPassword,
         passwordHash: newPasswordHash
       });
 
@@ -667,6 +696,47 @@ export class FirestoreService {
     } catch (error) {
       console.error('Error updating admin password:', error);
       throw new Error('Không thể cập nhật mật khẩu admin');
+    }
+  }
+
+  /**
+   * Migration function: Remove password field from existing admin config documents
+   */
+  static async migrateRemovePasswordField(): Promise<void> {
+    try {
+      const adminConfigDoc = await getDoc(doc(db, COLLECTIONS.PASSWORD_ADMIN, DOCUMENT_IDS.PASSWORD_ADMIN));
+
+      if (adminConfigDoc.exists()) {
+        const data = adminConfigDoc.data();
+
+        // Check if password field exists
+        if (data && 'password' in data) {
+          console.log('🔄 Migrating admin config: removing password field...');
+
+          // Create new config without password field
+          const migratedConfig: AdminConfig = {
+            passwordHash: data.passwordHash || await this.hashPassword(data.password || 'admin123'),
+            createdAt: data.createdAt || Timestamp.now(),
+            lastUpdated: Timestamp.now(),
+            version: data.version || '1.0.0'
+          };
+
+          // Update document with migrated config
+          await setDoc(doc(db, COLLECTIONS.PASSWORD_ADMIN, DOCUMENT_IDS.PASSWORD_ADMIN), migratedConfig);
+
+          console.log('✅ Admin config migration completed: password field removed');
+
+          SecurityService.logAdminAction('ADMIN_CONFIG_MIGRATED', {
+            action: 'REMOVE_PASSWORD_FIELD',
+            timestamp: new Date().toISOString()
+          });
+        } else {
+          console.log('✅ Admin config already migrated: no password field found');
+        }
+      }
+    } catch (error) {
+      console.error('Error migrating admin config:', error);
+      throw new Error('Không thể migration cấu hình admin');
     }
   }
 }

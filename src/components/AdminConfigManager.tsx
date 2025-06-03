@@ -64,14 +64,18 @@ const AdminConfigManager: React.FC = () => {
     }
   };
 
-  // Test current admin password
+  // Test Firebase connection and admin config
   const testCurrentPassword = async () => {
     try {
-      const currentPassword = await FirestoreService.getAdminPassword();
-      message.info(`Mật khẩu admin hiện tại: ${currentPassword.substring(0, 3)}***`);
+      const adminConfig = await FirestoreService.getAdminConfig();
+      if (adminConfig.passwordHash) {
+        message.success('Kết nối Firebase thành công! Cấu hình admin đã được tải.');
+      } else {
+        message.warning('Kết nối thành công nhưng không tìm thấy hash mật khẩu.');
+      }
     } catch (error) {
-      console.error('Error getting current password:', error);
-      message.error('Không thể lấy mật khẩu hiện tại');
+      console.error('Error testing Firebase connection:', error);
+      message.error('Không thể kết nối đến Firebase hoặc tải cấu hình admin');
     }
   };
 
@@ -128,16 +132,22 @@ const AdminConfigManager: React.FC = () => {
                 {adminConfig.version}
               </Descriptions.Item>
               <Descriptions.Item label="Ngày tạo">
-                {adminConfig.createdAt.toDate().toLocaleString('vi-VN')}
+                {adminConfig.createdAt && adminConfig.createdAt.toDate ?
+                  adminConfig.createdAt.toDate().toLocaleString('vi-VN') :
+                  'Không có thông tin'
+                }
               </Descriptions.Item>
               <Descriptions.Item label="Cập nhật lần cuối">
-                {adminConfig.lastUpdated.toDate().toLocaleString('vi-VN')}
+                {adminConfig.lastUpdated && adminConfig.lastUpdated.toDate ?
+                  adminConfig.lastUpdated.toDate().toLocaleString('vi-VN') :
+                  'Không có thông tin'
+                }
               </Descriptions.Item>
-              <Descriptions.Item label="Mật khẩu">
+              <Descriptions.Item label="Bảo mật">
                 <Space>
-                  <Text code>{adminConfig.password.substring(0, 3)}***</Text>
+                  <Text code>Mật khẩu được mã hóa an toàn</Text>
                   <Button size="small" onClick={testCurrentPassword}>
-                    Xem đầy đủ
+                    Kiểm tra kết nối
                   </Button>
                 </Space>
               </Descriptions.Item>
@@ -196,7 +206,7 @@ const AdminConfigManager: React.FC = () => {
 
         <Alert
           message="Lưu ý bảo mật"
-          description="Mật khẩu admin được lưu trữ trong Firebase và sẽ được sử dụng cho tất cả các xác thực admin trong ứng dụng. Hãy chọn mật khẩu mạnh và bảo mật."
+          description="Mật khẩu admin được mã hóa an toàn và chỉ lưu trữ hash trong Firebase. Mật khẩu gốc không bao giờ được lưu trữ dưới dạng văn bản thuần túy. Hãy chọn mật khẩu mạnh và bảo mật."
           type="info"
           showIcon
           style={{ marginTop: '16px' }}
