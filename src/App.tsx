@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Layout, Tabs, Typography, Space, message, Button, App as AntApp } from 'antd';
 import { CalendarOutlined, UnorderedListOutlined, SettingOutlined, FileTextOutlined, DatabaseOutlined, LockOutlined, PlayCircleOutlined, PauseCircleOutlined } from '@ant-design/icons';
-import dayjs from 'dayjs';
 import type { AppSettings, WeeklyRegistration as WeeklyRegistrationType, RegistrationSummary } from './types';
 import Settings from './components/Settings';
 import WeeklyRegistration from './components/WeeklyRegistration';

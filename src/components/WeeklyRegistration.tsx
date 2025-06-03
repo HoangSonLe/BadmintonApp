@@ -74,12 +74,6 @@ const WeeklyRegistration: React.FC<WeeklyRegistrationProps> = ({
     }).format(amount);
   };
 
-  const formatDate = (date: dayjs.Dayjs) => {
-    return date.format('DD/MM/YYYY');
-  };
-
-
-
   const formatTime = (date: Date) => {
     return dayjs(date).format('HH:mm:ss');
   };

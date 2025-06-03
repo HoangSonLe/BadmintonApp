@@ -173,7 +173,7 @@ const SecurityDashboard: React.FC = () => {
       title: 'Thao tác',
       key: 'actions',
       width: 100,
-      render: (_, record: AdminAction) => (
+      render: (_: unknown, record: AdminAction) => (
         <Button
           type="link"
           icon={<EyeOutlined />}
@@ -235,7 +235,7 @@ const SecurityDashboard: React.FC = () => {
       title: 'Thao tác',
       key: 'actions',
       width: 100,
-      render: (_, record: SecurityEvent) => (
+      render: (_: unknown, record: SecurityEvent) => (
         <Button
           type="link"
           icon={<EyeOutlined />}
