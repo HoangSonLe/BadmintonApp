@@ -3,12 +3,15 @@ import { Card, Button, Space, Typography, message, Divider } from 'antd';
 import { DatabaseOutlined, PlayCircleOutlined } from '@ant-design/icons';
 import { DatabaseService } from '../services/databaseService';
 import type { WeeklyRegistration, Player } from '../types';
+import AdminPasswordConfirm from './AdminPasswordConfirm';
 
 const { Title, Text, Paragraph } = Typography;
 
 const DatabaseDemo: React.FC = () => {
   const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
+  const [resetting, setResetting] = useState(false);
 
   const refreshStats = async () => {
     try {
@@ -81,6 +84,26 @@ const DatabaseDemo: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Handle reset database with password confirmation
+  const handleResetDatabase = async () => {
+    setResetting(true);
+    try {
+      await DatabaseService.resetDatabase();
+      await refreshStats();
+      message.success('Database đã được reset thành công!');
+      setShowPasswordConfirm(false);
+    } catch (error) {
+      message.error('Lỗi khi reset database: ' + (error as Error).message);
+    } finally {
+      setResetting(false);
+    }
+  };
+
+  // Show password confirmation modal
+  const showResetConfirmation = () => {
+    setShowPasswordConfirm(true);
   };
 
   return (
@@ -156,28 +179,15 @@ const DatabaseDemo: React.FC = () => {
               Xuất Database
             </Button>
 
-            {/* Reset Database button hidden for safety */}
-            {false && (
-              <Button
-                danger
-                onClick={async () => {
-                  try {
-                    setLoading(true);
-                    await DatabaseService.resetDatabase();
-                    await refreshStats();
-                    message.success('Đã reset database!');
-                  } catch (error) {
-                    message.error('Lỗi khi reset database: ' + (error as Error).message);
-                  } finally {
-                    setLoading(false);
-                  }
-                }}
-                loading={loading}
-                disabled={loading}
-              >
-                Reset Database
-              </Button>
-            )}
+            {/* Reset Database button with password confirmation */}
+            <Button
+              danger
+              onClick={showResetConfirmation}
+              loading={resetting}
+              disabled={resetting || loading}
+            >
+              Reset Database
+            </Button>
           </Space>
         </div>
 
@@ -200,6 +210,16 @@ const DatabaseDemo: React.FC = () => {
           </div>
         </div>
       </Space>
+
+      {/* Admin Password Confirmation Modal */}
+      <AdminPasswordConfirm
+        visible={showPasswordConfirm}
+        title="Reset Database (Demo)"
+        description="Bạn sắp xóa toàn bộ database demo và reset về trạng thái mặc định. Tất cả mock data và dữ liệu test sẽ bị mất. Hành động này KHÔNG THỂ HOÀN TÁC!"
+        onConfirm={handleResetDatabase}
+        onCancel={() => setShowPasswordConfirm(false)}
+        loading={resetting}
+      />
     </Card>
   );
 };

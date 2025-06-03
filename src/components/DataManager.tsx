@@ -23,6 +23,7 @@ import {
 import type { UploadFile } from 'antd/es/upload/interface';
 import type { AppSettings, WeeklyRegistration } from '../types';
 import { DatabaseService } from '../services/databaseService';
+import AdminPasswordConfirm from './AdminPasswordConfirm';
 
 const { Title, Text, Paragraph } = Typography;
 const { confirm } = Modal;
@@ -41,6 +42,8 @@ const DataManager: React.FC<DataManagerProps> = ({
   const [loading, setLoading] = useState(false);
   const [dbStats, setDbStats] = useState<any>(null);
   const [metadata, setMetadata] = useState<any>(null);
+  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
+  const [resetting, setResetting] = useState(false);
 
   // Load database stats
   const loadStats = async () => {
@@ -127,6 +130,26 @@ const DataManager: React.FC<DataManagerProps> = ({
     }
 
     return false; // Prevent default upload behavior
+  };
+
+  // Handle reset database with password confirmation
+  const handleResetDatabase = async () => {
+    setResetting(true);
+    try {
+      await DatabaseService.resetDatabase();
+      await loadStats();
+      message.success('Database đã được reset thành công!');
+      setShowPasswordConfirm(false);
+    } catch (error) {
+      message.error('Lỗi khi reset database: ' + (error as Error).message);
+    } finally {
+      setResetting(false);
+    }
+  };
+
+  // Show password confirmation modal
+  const showResetConfirmation = () => {
+    setShowPasswordConfirm(true);
   };
 
   if (loading || !dbStats || !metadata) {
@@ -263,25 +286,15 @@ const DataManager: React.FC<DataManagerProps> = ({
             >
               Tải lại trang
             </Button>
-            {/* Reset Database button hidden for safety */}
-            {false && (
-              <Button
-                danger
-                onClick={() => {
-                  confirm({
-                    title: 'Xác nhận reset database',
-                    content: 'Bạn có chắc chắn muốn reset database về trạng thái mặc định? Tất cả dữ liệu sẽ bị xóa.',
-                    onOk: async () => {
-                      await DatabaseService.resetDatabase();
-                      await loadStats();
-                      message.success('Database đã được reset!');
-                    }
-                  });
-                }}
-              >
-                Reset Database
-              </Button>
-            )}
+            {/* Reset Database button with password confirmation */}
+            <Button
+              danger
+              onClick={showResetConfirmation}
+              loading={resetting}
+              disabled={resetting}
+            >
+              Reset Database
+            </Button>
           </Space>
         </div>
 
@@ -300,6 +313,16 @@ const DataManager: React.FC<DataManagerProps> = ({
           </ul>
         </div>
       </Space>
+
+      {/* Admin Password Confirmation Modal */}
+      <AdminPasswordConfirm
+        visible={showPasswordConfirm}
+        title="Reset Database"
+        description="Bạn sắp xóa toàn bộ database và reset về trạng thái mặc định. Tất cả dữ liệu đăng ký, cài đặt sẽ bị mất vĩnh viễn. Hành động này KHÔNG THỂ HOÀN TÁC!"
+        onConfirm={handleResetDatabase}
+        onCancel={() => setShowPasswordConfirm(false)}
+        loading={resetting}
+      />
     </Card>
   );
 };

@@ -119,7 +119,15 @@ export class SecurityService {
     
     return true;
   }
-  
+
+  /**
+   * Verify admin code (for password confirmation)
+   */
+  static verifyAdminCode(inputCode: string): boolean {
+    const adminCode = import.meta.env.VITE_ADMIN_CODE || 'admin123';
+    return inputCode === adminCode;
+  }
+
   /**
    * Log admin actions for security monitoring
    */
