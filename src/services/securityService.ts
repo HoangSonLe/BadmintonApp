@@ -2,6 +2,8 @@
  * Security Service - Quản lý bảo mật và xác thực admin
  */
 
+import { StorageService } from '../config/storageKeys';
+
 export interface AdminAction {
   action: string;
   details?: Record<string, unknown>;
@@ -52,17 +54,17 @@ export class SecurityService {
    * Check if current session is admin
    */
   static isCurrentSessionAdmin(): boolean {
-    const adminStatus = localStorage.getItem('isAdmin');
-    const adminAuthTime = localStorage.getItem('adminAuthTime');
-    
+    const adminStatus = StorageService.getItem('ADMIN_STATUS');
+    const adminAuthTime = StorageService.getItem('ADMIN_AUTH_TIME');
+
     if (adminStatus !== 'true' || !adminAuthTime) {
       return false;
     }
-    
+
     // Check if session is still valid
     const authTime = parseInt(adminAuthTime);
     const currentTime = Date.now();
-    
+
     if (currentTime - authTime >= this.SESSION_DURATION) {
       // Session expired, clear localStorage
       this.clearAdminSession();
@@ -72,7 +74,7 @@ export class SecurityService {
       });
       return false;
     }
-    
+
     return true;
   }
   
@@ -81,9 +83,9 @@ export class SecurityService {
    */
   static setAdminSession(): void {
     const timestamp = Date.now().toString();
-    localStorage.setItem('isAdmin', 'true');
-    localStorage.setItem('adminAuthTime', timestamp);
-    
+    StorageService.setItem('ADMIN_STATUS', 'true');
+    StorageService.setItem('ADMIN_AUTH_TIME', timestamp);
+
     this.logAdminAction('SESSION_CREATED', {
       sessionId: timestamp,
       expiresAt: new Date(Date.now() + this.SESSION_DURATION).toISOString()
@@ -94,10 +96,10 @@ export class SecurityService {
    * Clear admin session
    */
   static clearAdminSession(): void {
-    const sessionId = localStorage.getItem('adminAuthTime');
-    localStorage.removeItem('isAdmin');
-    localStorage.removeItem('adminAuthTime');
-    
+    const sessionId = StorageService.getItem('ADMIN_AUTH_TIME');
+    StorageService.removeItem('ADMIN_STATUS');
+    StorageService.removeItem('ADMIN_AUTH_TIME');
+
     this.logAdminAction('SESSION_CLEARED', {
       sessionId,
       clearedAt: new Date().toISOString()
@@ -137,7 +139,7 @@ export class SecurityService {
       details,
       timestamp: new Date().toISOString(),
       userAgent: navigator.userAgent,
-      sessionId: localStorage.getItem('adminAuthTime')
+      sessionId: StorageService.getItem('ADMIN_AUTH_TIME')
     };
 
     console.log('🔐 Admin Action:', logEntry);
@@ -151,7 +153,7 @@ export class SecurityService {
       logs.splice(0, logs.length - this.MAX_LOGS);
     }
 
-    localStorage.setItem('adminLogs', JSON.stringify(logs));
+    StorageService.setItem('ADMIN_LOGS', JSON.stringify(logs));
 
     // Also save to Firebase (async, don't wait)
     this.saveToFirebase('admin', logEntry);
@@ -180,7 +182,7 @@ export class SecurityService {
       securityLogs.splice(0, securityLogs.length - this.MAX_LOGS);
     }
 
-    localStorage.setItem('securityLogs', JSON.stringify(securityLogs));
+    StorageService.setItem('SECURITY_LOGS', JSON.stringify(securityLogs));
 
     // Also save to Firebase (async, don't wait)
     this.saveToFirebase('security', logEntry);
@@ -210,18 +212,18 @@ export class SecurityService {
    */
   static getAdminLogs(): AdminAction[] {
     try {
-      return JSON.parse(localStorage.getItem('adminLogs') || '[]');
+      return JSON.parse(StorageService.getItem('ADMIN_LOGS') || '[]');
     } catch {
       return [];
     }
   }
-  
+
   /**
    * Get security logs
    */
   static getSecurityLogs(): SecurityEvent[] {
     try {
-      return JSON.parse(localStorage.getItem('securityLogs') || '[]');
+      return JSON.parse(StorageService.getItem('SECURITY_LOGS') || '[]');
     } catch {
       return [];
     }
@@ -232,10 +234,10 @@ export class SecurityService {
    */
   static clearLogs(): void {
     this.validateAdminAction('CLEAR_LOGS');
-    
-    localStorage.removeItem('adminLogs');
-    localStorage.removeItem('securityLogs');
-    
+
+    StorageService.removeItem('ADMIN_LOGS');
+    StorageService.removeItem('SECURITY_LOGS');
+
     this.logAdminAction('LOGS_CLEARED', {
       clearedAt: new Date().toISOString()
     });
@@ -256,8 +258,8 @@ export class SecurityService {
       totalSecurityEvents: securityLogs.length,
       lastAdminAction: adminLogs[adminLogs.length - 1]?.timestamp || null,
       lastSecurityEvent: securityLogs[securityLogs.length - 1]?.timestamp || null,
-      sessionExpiry: isAdmin ? 
-        new Date(parseInt(localStorage.getItem('adminAuthTime') || '0') + this.SESSION_DURATION).toISOString() : 
+      sessionExpiry: isAdmin ?
+        new Date(parseInt(StorageService.getItem('ADMIN_AUTH_TIME') || '0') + this.SESSION_DURATION).toISOString() :
         null
     };
   }

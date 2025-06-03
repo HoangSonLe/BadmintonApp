@@ -9,6 +9,7 @@ import RegistrationList from './components/RegistrationList';
 import DataManager from './components/DataManager';
 import DatabaseDemo from './components/DatabaseDemo';
 import SecurityDashboard from './components/SecurityDashboard';
+import StorageManager from './components/StorageManager';
 import AdminAuth from './components/AdminAuth';
 import { DatabaseService } from './services/databaseService';
 import { SecurityService } from './services/securityService';
@@ -568,6 +569,17 @@ function App() {
       ),
       children: isAdmin ? <SecurityDashboard /> : null,
     },
+    // {
+    //   key: 'storage',
+    //   label: (
+    //     <span onClick={handleAdminTabClick}>
+    //       <DatabaseOutlined />
+    //       Storage
+    //       {!isAdmin && <LockOutlined style={{ marginLeft: '4px', fontSize: '12px' }} />}
+    //     </span>
+    //   ),
+    //   children: isAdmin ? <StorageManager /> : null,
+    // },
   ];
 
   // Combine tabs based on admin status
@@ -575,7 +587,7 @@ function App() {
 
   // Handle tab change with admin check and auto-reload
   const handleTabChange = async (key: string) => {
-    const adminTabKeys = ['settings', 'data', 'demo', 'security'];
+    const adminTabKeys = ['settings', 'data', 'demo', 'security', 'storage'];
 
     if (adminTabKeys.includes(key) && !isAdmin) {
       setShowAdminAuth(true);

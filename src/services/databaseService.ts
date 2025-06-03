@@ -1,5 +1,6 @@
 import type { AppSettings, WeeklyRegistration } from '../types';
 import { FirestoreService } from './firestoreService';
+import { StorageService, STORAGE_KEYS } from '../config/storageKeys';
 
 // Database structure interface
 export interface DatabaseSchema {
@@ -14,8 +15,8 @@ export interface DatabaseSchema {
   };
 }
 
-// Local storage key for our JSON database
-const DB_KEY = 'badminton_json_database';
+// Local storage key for our JSON database (now managed by StorageService)
+// const DB_KEY = 'badminton_json_database'; // Legacy key - now using STORAGE_KEYS.DATABASE
 
 // Default database structure
 const DEFAULT_DATABASE: DatabaseSchema = {
@@ -49,11 +50,16 @@ export class DatabaseService {
    * Khởi tạo database nếu chưa tồn tại
    */
   static async initializeDatabase(): Promise<void> {
+    // Migrate legacy data if exists
+    if (StorageService.hasLegacyData()) {
+      StorageService.migrateLegacyData();
+    }
+
     if (this.DISABLE_FIRESTORE) {
       console.log('🔄 Firestore disabled, using localStorage only');
-      const existingDb = localStorage.getItem(DB_KEY);
+      const existingDb = StorageService.getItem('DATABASE');
       if (!existingDb) {
-        localStorage.setItem(DB_KEY, JSON.stringify(DEFAULT_DATABASE));
+        StorageService.setItem('DATABASE', JSON.stringify(DEFAULT_DATABASE));
       }
       return;
     }
@@ -64,9 +70,9 @@ export class DatabaseService {
     } catch (error) {
       console.error('⚠️ Error initializing Firestore, falling back to localStorage:', error);
       // Fallback to localStorage if Firestore fails
-      const existingDb = localStorage.getItem(DB_KEY);
+      const existingDb = StorageService.getItem('DATABASE');
       if (!existingDb) {
-        localStorage.setItem(DB_KEY, JSON.stringify(DEFAULT_DATABASE));
+        StorageService.setItem('DATABASE', JSON.stringify(DEFAULT_DATABASE));
       }
     }
   }
@@ -75,7 +81,7 @@ export class DatabaseService {
    * Đọc toàn bộ database
    */
   static readDatabase(): DatabaseSchema {
-    const dbString = localStorage.getItem(DB_KEY);
+    const dbString = StorageService.getItem('DATABASE');
     if (!dbString) {
       this.initializeDatabase();
       return DEFAULT_DATABASE;
@@ -115,7 +121,7 @@ export class DatabaseService {
         (total, reg) => total + reg.players.length, 0
       );
 
-      localStorage.setItem(DB_KEY, JSON.stringify(database));
+      StorageService.setItem('DATABASE', JSON.stringify(database));
     } catch (error) {
       console.error('Error writing database:', error);
       throw new Error('Không thể lưu dữ liệu vào database');
