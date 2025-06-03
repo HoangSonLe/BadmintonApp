@@ -1,5 +1,6 @@
 import type { AppSettings, WeeklyRegistration } from '../types';
 import { FirestoreService } from './firestoreService';
+import { SecurityService } from './securityService';
 
 // Database structure interface
 export interface DatabaseSchema {

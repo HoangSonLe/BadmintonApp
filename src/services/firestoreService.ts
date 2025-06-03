@@ -12,6 +12,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import type { AppSettings, WeeklyRegistration } from '../types';
+import { SecurityService } from './securityService';
 
 // Firestore collection names
 const COLLECTIONS = {
@@ -114,14 +115,26 @@ export class FirestoreService {
   }
 
   /**
-   * Cập nhật settings
+   * Cập nhật settings (Admin only)
    */
   static async updateSettings(newSettings: AppSettings): Promise<void> {
+    // Validate admin permission
+    SecurityService.validateAdminAction('UPDATE_SETTINGS');
+
     try {
       await setDoc(doc(db, COLLECTIONS.SETTINGS, DOCUMENT_IDS.APP_SETTINGS), newSettings);
       await this.updateMetadata();
+
+      SecurityService.logAdminAction('SETTINGS_UPDATED', {
+        newSettings,
+        timestamp: new Date().toISOString()
+      });
     } catch (error) {
       console.error('Error updating settings:', error);
+      SecurityService.logAdminAction('SETTINGS_UPDATE_FAILED', {
+        error: (error as Error).message,
+        newSettings
+      });
       throw new Error('Không thể cập nhật cài đặt trong Firestore');
     }
   }
@@ -210,14 +223,31 @@ export class FirestoreService {
   }
 
   /**
-   * Xóa registration theo ID
+   * Xóa registration theo ID (Admin only)
    */
   static async deleteRegistration(id: string): Promise<void> {
+    // Validate admin permission
+    SecurityService.validateAdminAction('DELETE_REGISTRATION');
+
     try {
+      // Get registration data before deletion for logging
+      const registrationDoc = await getDoc(doc(db, COLLECTIONS.REGISTRATIONS, id));
+      const registrationData = registrationDoc.exists() ? registrationDoc.data() : null;
+
       await deleteDoc(doc(db, COLLECTIONS.REGISTRATIONS, id));
       await this.updateMetadata();
+
+      SecurityService.logAdminAction('REGISTRATION_DELETED', {
+        registrationId: id,
+        deletedData: registrationData,
+        timestamp: new Date().toISOString()
+      });
     } catch (error) {
       console.error('Error deleting registration:', error);
+      SecurityService.logAdminAction('REGISTRATION_DELETE_FAILED', {
+        registrationId: id,
+        error: (error as Error).message
+      });
       throw new Error('Không thể xóa đăng ký từ Firestore');
     }
   }
@@ -284,10 +314,17 @@ export class FirestoreService {
   }
 
   /**
-   * Reset database (xóa tất cả dữ liệu)
+   * Reset database (xóa tất cả dữ liệu) - Admin only
    */
   static async resetDatabase(): Promise<void> {
+    // Validate admin permission
+    SecurityService.validateAdminAction('RESET_DATABASE');
+
     try {
+      // Get current data for logging before deletion
+      const currentRegistrations = await this.getRegistrations();
+      const currentSettings = await this.getSettings();
+
       const batch = writeBatch(db);
 
       // Xóa tất cả registrations
@@ -316,8 +353,20 @@ export class FirestoreService {
       batch.set(doc(db, COLLECTIONS.METADATA, DOCUMENT_IDS.APP_METADATA), defaultMetadata);
 
       await batch.commit();
+
+      SecurityService.logAdminAction('DATABASE_RESET', {
+        previousData: {
+          registrationsCount: currentRegistrations.length,
+          totalPlayers: currentRegistrations.reduce((sum, reg) => sum + reg.players.length, 0),
+          previousSettings: currentSettings
+        },
+        timestamp: new Date().toISOString()
+      });
     } catch (error) {
       console.error('Error resetting database:', error);
+      SecurityService.logAdminAction('DATABASE_RESET_FAILED', {
+        error: (error as Error).message
+      });
       throw new Error('Không thể reset database Firestore');
     }
   }

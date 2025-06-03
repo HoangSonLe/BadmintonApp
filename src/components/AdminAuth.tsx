@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Modal, Input, Button, Typography, Space, Alert } from 'antd';
 import { LockOutlined, KeyOutlined } from '@ant-design/icons';
+import { SecurityService } from '../services/securityService';
 
 const { Title, Text } = Typography;
 
@@ -24,14 +25,13 @@ const AdminAuth: React.FC<AdminAuthProps> = ({ visible, onSuccess, onCancel }) =
 
     // Simulate authentication delay
     setTimeout(() => {
-      if (adminCode.trim() === ADMIN_CODE) {
-        // Lưu trạng thái admin vào localStorage
-        localStorage.setItem('isAdmin', 'true');
-        localStorage.setItem('adminAuthTime', Date.now().toString());
+      if (SecurityService.verifyAdmin(adminCode.trim())) {
+        // Set admin session using SecurityService
+        SecurityService.setAdminSession();
         onSuccess();
         setAdminCode('');
       } else {
-        setError('Mã admin không đúng!');
+        setError('🚨 Mã admin không đúng! Hành động này đã được ghi lại.');
       }
       setLoading(false);
     }, 500);

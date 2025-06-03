@@ -1,0 +1,77 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to check if user is authenticated admin
+    function isAdmin() {
+      // In a real production environment, you would check against
+      // Firebase Auth custom claims or a secure admin collection
+      // For now, we'll allow all authenticated users to perform admin actions
+      // This should be enhanced with proper authentication
+      return request.auth != null;
+    }
+    
+    // Helper function to validate admin code (basic implementation)
+    function hasValidAdminCode() {
+      // This is a basic check - in production, use Firebase Auth custom claims
+      return request.auth != null && 
+             request.auth.token != null;
+    }
+    
+    // Settings collection - Admin only for writes
+    match /settings/{document} {
+      // Allow read for all users (needed for app functionality)
+      allow read: if true;
+      
+      // Only allow writes for authenticated admin users
+      allow write: if isAdmin() && 
+                      resource == null || 
+                      resource.data.keys().hasAll(['courtsCount', 'playersPerCourt', 'extraCourtFee', 'registrationEnabled']);
+    }
+    
+    // Registrations collection
+    match /registrations/{document} {
+      // Allow read for all users (needed to display registration lists)
+      allow read: if true;
+      
+      // Allow create for all users (normal registration process)
+      allow create: if true;
+      
+      // Allow update for all users (adding players to existing registrations)
+      allow update: if true;
+      
+      // Only allow delete for authenticated admin users
+      allow delete: if isAdmin();
+    }
+    
+    // Metadata collection - Admin only for writes
+    match /metadata/{document} {
+      // Allow read for all users (needed for stats display)
+      allow read: if true;
+      
+      // Only allow writes for authenticated admin users
+      allow write: if isAdmin();
+    }
+    
+    // Admin logs collection (if implemented in future)
+    match /admin_logs/{document} {
+      // Only admin can read/write admin logs
+      allow read, write: if isAdmin();
+    }
+    
+    // Security logs collection (if implemented in future)
+    match /security_logs/{document} {
+      // Only admin can read security logs
+      allow read: if isAdmin();
+      
+      // Allow system to write security logs
+      allow create: if true;
+    }
+    
+    // Deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

@@ -9,8 +9,10 @@ import Summary from './components/Summary';
 import RegistrationList from './components/RegistrationList';
 import DataManager from './components/DataManager';
 import DatabaseDemo from './components/DatabaseDemo';
+import SecurityDashboard from './components/SecurityDashboard';
 import AdminAuth from './components/AdminAuth';
 import { DatabaseService } from './services/databaseService';
+import { SecurityService } from './services/securityService';
 
 const { Header, Content } = Layout;
 const { Title } = Typography;
@@ -38,24 +40,15 @@ function App() {
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [showAdminAuth, setShowAdminAuth] = useState<boolean>(false);
 
-  // Check admin status from localStorage on component mount
+  // Check admin status using SecurityService on component mount
   useEffect(() => {
-    const adminStatus = localStorage.getItem('isAdmin');
-    const adminAuthTime = localStorage.getItem('adminAuthTime');
+    const isValidAdmin = SecurityService.isCurrentSessionAdmin();
+    setIsAdmin(isValidAdmin);
 
-    if (adminStatus === 'true' && adminAuthTime) {
-      // Check if admin session is still valid (24 hours)
-      const authTime = parseInt(adminAuthTime);
-      const currentTime = Date.now();
-      const sessionDuration = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
-
-      if (currentTime - authTime < sessionDuration) {
-        setIsAdmin(true);
-      } else {
-        // Session expired, clear localStorage
-        localStorage.removeItem('isAdmin');
-        localStorage.removeItem('adminAuthTime');
-      }
+    if (isValidAdmin) {
+      SecurityService.logAdminAction('SESSION_RESTORED', {
+        restoredAt: new Date().toISOString()
+      });
     }
   }, []);
 
@@ -370,11 +363,10 @@ function App() {
   };
 
   const handleAdminLogout = () => {
+    SecurityService.clearAdminSession();
     setIsAdmin(false);
-    localStorage.removeItem('isAdmin');
-    localStorage.removeItem('adminAuthTime');
     setActiveTab('register'); // Switch back to register tab
-    message.info('Đã đăng xuất khỏi chế độ admin');
+    message.info('🔐 Đã đăng xuất khỏi chế độ admin');
   };
 
   const handleAdminTabClick = () => {
@@ -487,6 +479,17 @@ function App() {
       ),
       children: isAdmin ? <DatabaseDemo /> : null,
     },
+    {
+      key: 'security',
+      label: (
+        <span onClick={handleAdminTabClick}>
+          🔐
+          Bảo mật
+          {!isAdmin && <LockOutlined style={{ marginLeft: '4px', fontSize: '12px' }} />}
+        </span>
+      ),
+      children: isAdmin ? <SecurityDashboard /> : null,
+    },
   ];
 
   // Combine tabs based on admin status
@@ -494,7 +497,7 @@ function App() {
 
   // Handle tab change with admin check
   const handleTabChange = (key: string) => {
-    const adminTabKeys = ['settings', 'data', 'demo'];
+    const adminTabKeys = ['settings', 'data', 'demo', 'security'];
 
     if (adminTabKeys.includes(key) && !isAdmin) {
       setShowAdminAuth(true);
