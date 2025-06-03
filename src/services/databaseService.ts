@@ -22,7 +22,8 @@ const DEFAULT_DATABASE: DatabaseSchema = {
   settings: {
     courtsCount: 2,
     playersPerCourt: 4,
-    extraCourtFee: 100000
+    extraCourtFee: 100000,
+    registrationEnabled: true
   },
   registrations: [],
   metadata: {
@@ -325,7 +326,8 @@ export class DatabaseService {
         settings: {
           courtsCount: 2,
           playersPerCourt: 4,
-          extraCourtFee: 100000
+          extraCourtFee: 100000,
+          registrationEnabled: true
         }
       },
       // Tuần 2 - Tuần trước
@@ -344,7 +346,8 @@ export class DatabaseService {
         settings: {
           courtsCount: 2,
           playersPerCourt: 4,
-          extraCourtFee: 100000
+          extraCourtFee: 100000,
+          registrationEnabled: true
         }
       },
       // Tuần 3 - 2 tuần trước
@@ -368,7 +371,8 @@ export class DatabaseService {
         settings: {
           courtsCount: 2,
           playersPerCourt: 4,
-          extraCourtFee: 100000
+          extraCourtFee: 100000,
+          registrationEnabled: true
         }
       },
       // Tuần 4 - Tháng trước
@@ -385,7 +389,8 @@ export class DatabaseService {
         settings: {
           courtsCount: 2,
           playersPerCourt: 4,
-          extraCourtFee: 100000
+          extraCourtFee: 100000,
+          registrationEnabled: true
         }
       },
       // Tuần 5 - Tháng trước
@@ -406,7 +411,8 @@ export class DatabaseService {
         settings: {
           courtsCount: 2,
           playersPerCourt: 4,
-          extraCourtFee: 100000
+          extraCourtFee: 100000,
+          registrationEnabled: true
         }
       }
     ];

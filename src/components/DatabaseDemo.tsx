@@ -55,7 +55,8 @@ const DatabaseDemo: React.FC = () => {
         settings: {
           courtsCount: 2,
           playersPerCourt: 4,
-          extraCourtFee: 100000
+          extraCourtFee: 100000,
+          registrationEnabled: true
         }
       };
 

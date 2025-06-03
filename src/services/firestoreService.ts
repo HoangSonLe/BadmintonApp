@@ -65,7 +65,8 @@ export class FirestoreService {
         const defaultSettings: AppSettings = {
           courtsCount: 2,
           playersPerCourt: 4,
-          extraCourtFee: 100000
+          extraCourtFee: 100000,
+          registrationEnabled: true
         };
         await setDoc(doc(db, COLLECTIONS.SETTINGS, DOCUMENT_IDS.APP_SETTINGS), defaultSettings);
       }
@@ -100,7 +101,8 @@ export class FirestoreService {
         return {
           courtsCount: 2,
           playersPerCourt: 4,
-          extraCourtFee: 100000
+          extraCourtFee: 100000,
+          registrationEnabled: true
         };
       }
 
@@ -298,7 +300,8 @@ export class FirestoreService {
       const defaultSettings: AppSettings = {
         courtsCount: 2,
         playersPerCourt: 4,
-        extraCourtFee: 100000
+        extraCourtFee: 100000,
+        registrationEnabled: true
       };
       batch.set(doc(db, COLLECTIONS.SETTINGS, DOCUMENT_IDS.APP_SETTINGS), defaultSettings);
 
