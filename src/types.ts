@@ -3,6 +3,7 @@ export interface AppSettings {
   courtsCount: number;
   playersPerCourt: number;
   extraCourtFee: number;
+  registrationEnabled: boolean; // Trạng thái mở/khóa đăng ký
 }
 
 // Player Interface

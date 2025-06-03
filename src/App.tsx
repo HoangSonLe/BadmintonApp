@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Layout, Tabs, Typography, Space, message, Button } from 'antd';
-import { CalendarOutlined, UnorderedListOutlined, SettingOutlined, FileTextOutlined, DatabaseOutlined, LockOutlined } from '@ant-design/icons';
+import { CalendarOutlined, UnorderedListOutlined, SettingOutlined, FileTextOutlined, DatabaseOutlined, LockOutlined, PlayCircleOutlined, PauseCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { AppSettings, WeeklyRegistration as WeeklyRegistrationType, RegistrationSummary } from './types';
 import Settings from './components/Settings';
@@ -20,7 +20,8 @@ function App() {
   const [settings, setSettings] = useState<AppSettings>({
     courtsCount: 2,
     playersPerCourt: 4,
-    extraCourtFee: 100000
+    extraCourtFee: 100000,
+    registrationEnabled: true // Mặc định cho phép đăng ký
   });
   const [registrations, setRegistrations] = useState<WeeklyRegistrationType[]>([]);
   const [currentSummary, setCurrentSummary] = useState<RegistrationSummary>({
@@ -374,6 +375,23 @@ function App() {
     }
   };
 
+  // Toggle registration status (admin only)
+  const handleToggleRegistration = async () => {
+    try {
+      const newSettings = {
+        ...settings,
+        registrationEnabled: !settings.registrationEnabled
+      };
+
+      await handleSettingsChange(newSettings);
+
+      const status = newSettings.registrationEnabled ? 'mở' : 'khóa';
+      message.success(`Đã ${status} đăng ký thành công!`);
+    } catch (error) {
+      message.error('Lỗi khi thay đổi trạng thái đăng ký: ' + (error as Error).message);
+    }
+  };
+
   // Base tabs that are always visible
   const baseTabs = [
     {
@@ -390,6 +408,7 @@ function App() {
             settings={settings}
             registrations={registrations}
             onRegistrationSubmit={handleRegistrationSubmit}
+            isAdmin={isAdmin}
           />
           <Summary summary={currentSummary} settings={settings} />
         </Space>
@@ -486,21 +505,43 @@ function App() {
           </Title>
 
           {isAdmin && (
-            <Button
-              type="text"
-              danger
-              onClick={handleAdminLogout}
-              icon={<LockOutlined />}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                color: '#ff4d4f',
-                fontWeight: 'bold'
-              }}
-            >
-              Đăng xuất Admin
-            </Button>
+            <Space>
+              <Button
+                type={settings.registrationEnabled ? "default" : "primary"}
+                onClick={handleToggleRegistration}
+                icon={settings.registrationEnabled ? <PauseCircleOutlined /> : <PlayCircleOutlined />}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  fontWeight: '600',
+                  fontSize: '16px',
+                  color: settings.registrationEnabled ? '#ffffff' : '#ffffff',
+                  backgroundColor: settings.registrationEnabled ? '#ff6b6b' : '#006600',
+                  borderColor: settings.registrationEnabled ? '#ff6b6b' : '#006600',
+                  textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8)',
+                  border: 'none'
+                }}
+              >
+                {settings.registrationEnabled ? 'Khóa đăng ký' : 'Mở đăng ký'}
+              </Button>
+
+              <Button
+                type="text"
+                danger
+                onClick={handleAdminLogout}
+                icon={<LockOutlined />}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  color: '#ff4d4f',
+                  fontWeight: 'bold'
+                }}
+              >
+                Đăng xuất Admin
+              </Button>
+            </Space>
           )}
         </div>
       </Header>

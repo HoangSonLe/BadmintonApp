@@ -14,12 +14,14 @@ interface WeeklyRegistrationProps {
   settings: AppSettings;
   registrations: WeeklyRegistrationType[];
   onRegistrationSubmit: (registration: WeeklyRegistrationType) => void;
+  isAdmin?: boolean; // Để hiển thị thông tin admin
 }
 
 const WeeklyRegistration: React.FC<WeeklyRegistrationProps> = ({
   settings,
   registrations,
-  onRegistrationSubmit
+  onRegistrationSubmit,
+  isAdmin = false
 }) => {
   const [playerName, setPlayerName] = useState<string>('');
   const [players, setPlayers] = useState<Player[]>([]);
@@ -248,32 +250,55 @@ const WeeklyRegistration: React.FC<WeeklyRegistrationProps> = ({
           </div>
         )}
 
-        <div>
-          <CustomLabel icon={<UserOutlined />}>
-            Thêm người chơi mới
-          </CustomLabel>
-          <Space.Compact style={{ width: '100%' }}>
-            <Input
-              value={playerName}
-              onChange={(e) => setPlayerName(e.target.value)}
-              placeholder="Nhập tên người chơi"
-              prefix={<UserOutlined />}
-              onPressEnter={addPlayer}
-              size="large"
-            />
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={addPlayer}
-              disabled={!playerName.trim()}
-              size="large"
-            >
-              Thêm
-            </Button>
-          </Space.Compact>
-        </div>
+        {/* Hiển thị thông báo khi đăng ký bị khóa */}
+        {!settings.registrationEnabled && (
+          <Alert
+            message="🔒 Đăng ký đã bị khóa"
+            description={
+              <div>
+                <p>Hiện tại không thể đăng ký cho tuần này.</p>
+                {isAdmin && (
+                  <p style={{ color: '#1890ff', fontWeight: 'bold' }}>
+                    💡 Admin: Bạn có thể mở lại đăng ký bằng nút "Mở đăng ký" ở góc phải trên.
+                  </p>
+                )}
+              </div>
+            }
+            type="warning"
+            showIcon
+            style={{ marginBottom: '16px' }}
+          />
+        )}
 
-        {players.length > 0 && (
+        {/* Form đăng ký chỉ hiển thị khi được phép */}
+        {settings.registrationEnabled && (
+          <div>
+            <CustomLabel icon={<UserOutlined />}>
+              Thêm người chơi mới
+            </CustomLabel>
+            <Space.Compact style={{ width: '100%' }}>
+              <Input
+                value={playerName}
+                onChange={(e) => setPlayerName(e.target.value)}
+                placeholder="Nhập tên người chơi"
+                prefix={<UserOutlined />}
+                onPressEnter={addPlayer}
+                size="large"
+              />
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={addPlayer}
+                disabled={!playerName.trim()}
+                size="large"
+              >
+                Thêm
+              </Button>
+            </Space.Compact>
+          </div>
+        )}
+
+        {settings.registrationEnabled && players.length > 0 && (
           <div>
             <div className="flex items-center justify-between mb-3">
               <Title level={4} className="mb-0">
@@ -399,7 +424,7 @@ const WeeklyRegistration: React.FC<WeeklyRegistrationProps> = ({
         )}
 
         {/* Hiển thị thông tin phí khi có người vượt quá kế hoạch */}
-        {players.length > 0 && (
+        {settings.registrationEnabled && players.length > 0 && (
           <div>
             <CustomLabel icon={<HomeOutlined />}>
               Thông tin sân và phí
@@ -465,18 +490,20 @@ const WeeklyRegistration: React.FC<WeeklyRegistrationProps> = ({
           </div>
         )}
 
-        <Button
-          type="primary"
-          size="large"
-          block
-          onClick={handleSubmit}
-          disabled={players.length === 0}
-        >
-          {existingRegistration
-            ? `Thêm vào đăng ký (${players.length} người mới, tổng ${registrationSummary.totalPlayers} người)`
-            : `Đăng ký tuần tiếp theo (${players.length} người)`
-          }
-        </Button>
+        {settings.registrationEnabled && (
+          <Button
+            type="primary"
+            size="large"
+            block
+            onClick={handleSubmit}
+            disabled={players.length === 0}
+          >
+            {existingRegistration
+              ? `Thêm vào đăng ký (${players.length} người mới, tổng ${registrationSummary.totalPlayers} người)`
+              : `Đăng ký tuần tiếp theo (${players.length} người)`
+            }
+          </Button>
+        )}
       </Space>
     </Card>
   );

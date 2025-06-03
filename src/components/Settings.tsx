@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Card, Form, InputNumber, Button, Typography } from 'antd';
-import { HomeOutlined, UserOutlined, DollarOutlined, ControlOutlined } from '@ant-design/icons';
+import { Card, Form, InputNumber, Button, Typography, Switch } from 'antd';
+import { HomeOutlined, UserOutlined, DollarOutlined, ControlOutlined, LockOutlined } from '@ant-design/icons';
 import type { AppSettings } from '../types';
 import CustomLabel from './CustomLabel';
 
@@ -124,6 +124,22 @@ const Settings: React.FC<SettingsProps> = ({ settings, onSettingsChange }) => {
             placeholder="Nhập phí thuê thêm sân"
             formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
             parser={value => parseInt(value!.replace(/\$\s?|(,*)/g, ''), 10) || 0}
+          />
+        </Form.Item>
+
+        <Form.Item
+          name="registrationEnabled"
+          label={
+            <CustomLabel icon={<LockOutlined />}>
+              Trạng thái đăng ký
+            </CustomLabel>
+          }
+          valuePropName="checked"
+        >
+          <Switch
+            checkedChildren="Mở"
+            unCheckedChildren="Khóa"
+            size="default"
           />
         </Form.Item>
 
