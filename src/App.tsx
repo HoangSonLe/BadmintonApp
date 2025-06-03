@@ -569,17 +569,17 @@ function App() {
       ),
       children: isAdmin ? <SecurityDashboard /> : null,
     },
-    // {
-    //   key: 'storage',
-    //   label: (
-    //     <span onClick={handleAdminTabClick}>
-    //       <DatabaseOutlined />
-    //       Storage
-    //       {!isAdmin && <LockOutlined style={{ marginLeft: '4px', fontSize: '12px' }} />}
-    //     </span>
-    //   ),
-    //   children: isAdmin ? <StorageManager /> : null,
-    // },
+    {
+      key: 'storage',
+      label: (
+        <span onClick={handleAdminTabClick}>
+          <DatabaseOutlined />
+          Storage
+          {!isAdmin && <LockOutlined style={{ marginLeft: '4px', fontSize: '12px' }} />}
+        </span>
+      ),
+      children: isAdmin ? <StorageManager /> : null,
+    },
   ];
 
   // Combine tabs based on admin status
