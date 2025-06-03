@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Card, Form, InputNumber, Button, Typography, Switch, Input } from 'antd';
-import { HomeOutlined, UserOutlined, DollarOutlined, ControlOutlined, LockOutlined, EnvironmentOutlined, ShopOutlined } from '@ant-design/icons';
+import { Card, Form, InputNumber, Button, Typography, Switch, Input, Alert } from 'antd';
+import { HomeOutlined, UserOutlined, DollarOutlined, ControlOutlined, LockOutlined, EnvironmentOutlined, ShopOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import type { AppSettings } from '../types';
 import CustomLabel from './CustomLabel';
 
@@ -56,6 +56,15 @@ const Settings: React.FC<SettingsProps> = ({ settings, onSettingsChange }) => {
           Cài đặt hệ thống
         </Title>
       </div>
+
+      <Alert
+        message="📋 Lưu ý về cài đặt"
+        description="Các thay đổi cài đặt chỉ áp dụng cho tuần đang được đăng ký hiện tại, không ảnh hưởng đến các tuần đã đăng ký trước đó."
+        type="info"
+        showIcon
+        icon={<InfoCircleOutlined />}
+        style={{ marginBottom: '24px' }}
+      />
 
       <Form
         form={form}

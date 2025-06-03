@@ -208,7 +208,11 @@ function App() {
         setCurrentSummary(calculateSummaryFromFirebase(registrations, newSettings));
       }
 
-      message.success('Cài đặt đã được lưu và áp dụng cho tuần hiện tại!');
+      if (nextWeekRegistration) {
+        message.success('Cài đặt đã được lưu và áp dụng cho tuần đang đăng ký!');
+      } else {
+        message.success('Cài đặt đã được lưu và sẽ áp dụng cho đăng ký tuần tiếp theo!');
+      }
     } catch (error) {
       message.error('Lỗi khi lưu cài đặt: ' + (error as Error).message);
     }
