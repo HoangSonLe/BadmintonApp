@@ -16,9 +16,6 @@ const AdminAuth: React.FC<AdminAuthProps> = ({ visible, onSuccess, onCancel }) =
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
 
-  // Mã admin từ environment variable
-  const ADMIN_CODE = import.meta.env.VITE_ADMIN_CODE || 'admin123';
-
   const handleSubmit = () => {
     setLoading(true);
     setError('');
@@ -41,12 +38,6 @@ const AdminAuth: React.FC<AdminAuthProps> = ({ visible, onSuccess, onCancel }) =
     setAdminCode('');
     setError('');
     onCancel();
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleSubmit();
-    }
   };
 
   return (
@@ -102,7 +93,7 @@ const AdminAuth: React.FC<AdminAuthProps> = ({ visible, onSuccess, onCancel }) =
           <Input.Password
             value={adminCode}
             onChange={(e) => setAdminCode(e.target.value)}
-            onKeyPress={handleKeyPress}
+            onPressEnter={handleSubmit}
             placeholder="Nhập mã admin"
             prefix={<KeyOutlined style={{ color: '#bfbfbf' }} />}
             size="large"
