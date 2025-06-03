@@ -11,8 +11,10 @@ import DatabaseDemo from './components/DatabaseDemo';
 import SecurityDashboard from './components/SecurityDashboard';
 import StorageManager from './components/StorageManager';
 import AdminAuth from './components/AdminAuth';
+import AdminLoginButton from './components/AdminLoginButton';
 import { DatabaseService } from './services/databaseService';
 import { SecurityService } from './services/securityService';
+import { DatabaseSecurityService } from './services/databaseSecurityService';
 import { RegistrationLogger } from './services/registrationLogger';
 import { DateUtils } from './utils/dateUtils';
 
@@ -307,13 +309,15 @@ function App() {
     }
   };
 
-  // Handle registration deletion
+  // Handle registration deletion with security validation
   const handleDeleteRegistration = async (id: string) => {
     try {
       // Find the registration before deleting for logging
       const registrationToDelete = registrations.find(reg => reg.id === id);
 
-      await DatabaseService.deleteRegistration(id);
+      // Use secure delete method with server-side validation
+      await DatabaseSecurityService.secureDeleteRegistration(id);
+
       const newRegistrations = registrations.filter(reg => reg.id !== id);
       setRegistrations(newRegistrations);
 
@@ -339,9 +343,12 @@ function App() {
     }
   };
 
-  // Handle player deletion from registration
+  // Handle player deletion from registration with security validation
   const handleDeletePlayer = async (registrationId: string, playerId: string) => {
     try {
+      // Server-side admin validation before any deletion
+      DatabaseSecurityService.validateWriteAccess('DELETE_PLAYER');
+
       // Find the registration
       const registration = registrations.find(reg => reg.id === registrationId);
       if (!registration) {
@@ -364,8 +371,8 @@ function App() {
         players: updatedPlayers
       };
 
-      // Update in Firestore
-      await DatabaseService.updateRegistration(registrationId, updatedRegistration);
+      // Use secure update method
+      await DatabaseSecurityService.secureUpdateRegistration(registrationId, updatedRegistration);
 
       // Update local state
       const newRegistrations = registrations.map(reg =>
@@ -445,15 +452,12 @@ function App() {
     message.info('🔐 Đã đăng xuất khỏi chế độ admin');
   };
 
-  const handleAdminTabClick = () => {
-    if (!isAdmin) {
-      setShowAdminAuth(true);
-    }
-  };
-
   // Toggle registration status (admin only)
   const handleToggleRegistration = async () => {
     try {
+      // Validate admin access before changing settings
+      DatabaseSecurityService.validateWriteAccess('TOGGLE_REGISTRATION');
+
       const newSettings = {
         ...settings,
         registrationEnabled: !settings.registrationEnabled
@@ -512,88 +516,76 @@ function App() {
     },
   ];
 
-  // Admin tabs that require authentication
-  const adminTabs = [
+  // Admin tabs that require authentication - only show if user is admin
+  const adminTabs = isAdmin ? [
     {
       key: 'settings',
       label: (
-        <span onClick={handleAdminTabClick}>
+        <span>
           <SettingOutlined />
           Cài đặt
-          {!isAdmin && <LockOutlined style={{ marginLeft: '4px', fontSize: '12px' }} />}
         </span>
       ),
-      children: isAdmin ? (
+      children: (
         <Settings
           settings={settings}
           onSettingsChange={handleSettingsChange}
         />
-      ) : null,
+      ),
     },
     {
       key: 'data',
       label: (
-        <span onClick={handleAdminTabClick}>
+        <span>
           <FileTextOutlined />
           Dữ liệu
-          {!isAdmin && <LockOutlined style={{ marginLeft: '4px', fontSize: '12px' }} />}
         </span>
       ),
-      children: isAdmin ? (
+      children: (
         <DataManager
           settings={settings}
           registrations={registrations}
           onDataImport={handleDataImport}
         />
-      ) : null,
+      ),
     },
     {
       key: 'demo',
       label: (
-        <span onClick={handleAdminTabClick}>
+        <span>
           <DatabaseOutlined />
           Demo DB
-          {!isAdmin && <LockOutlined style={{ marginLeft: '4px', fontSize: '12px' }} />}
         </span>
       ),
-      children: isAdmin ? <DatabaseDemo /> : null,
+      children: <DatabaseDemo />,
     },
     {
       key: 'security',
       label: (
-        <span onClick={handleAdminTabClick}>
+        <span>
           🔐
           Bảo mật
-          {!isAdmin && <LockOutlined style={{ marginLeft: '4px', fontSize: '12px' }} />}
         </span>
       ),
-      children: isAdmin ? <SecurityDashboard /> : null,
+      children: <SecurityDashboard />,
     },
     {
       key: 'storage',
       label: (
-        <span onClick={handleAdminTabClick}>
+        <span>
           <DatabaseOutlined />
           Storage
-          {!isAdmin && <LockOutlined style={{ marginLeft: '4px', fontSize: '12px' }} />}
         </span>
       ),
-      children: isAdmin ? <StorageManager /> : null,
+      children: <StorageManager />,
     },
-  ];
+  ] : [];
 
   // Combine tabs based on admin status
   const tabItems = isAdmin ? [...baseTabs, ...adminTabs] : [...baseTabs, ...adminTabs];
 
-  // Handle tab change with admin check and auto-reload
+  // Handle tab change with auto-reload (admin tabs are now hidden if not admin)
   const handleTabChange = async (key: string) => {
-    const adminTabKeys = ['settings', 'data', 'demo', 'security', 'storage'];
-
-    if (adminTabKeys.includes(key) && !isAdmin) {
-      setShowAdminAuth(true);
-      return;
-    }
-
     setActiveTab(key);
 
     // Auto-reload data when switching to list tab
@@ -616,7 +608,7 @@ function App() {
               🏸 Quản lý đăng ký cầu lông
             </Title>
 
-            {isAdmin && (
+            {isAdmin ? (
               <Space>
                 <Button
                   type={settings.registrationEnabled ? "default" : "primary"}
@@ -654,6 +646,8 @@ function App() {
                   Đăng xuất Admin
                 </Button>
               </Space>
+            ) : (
+              <AdminLoginButton onClick={() => setShowAdminAuth(true)} />
             )}
           </div>
         </Header>

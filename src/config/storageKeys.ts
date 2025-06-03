@@ -13,18 +13,19 @@ const APP_PREFIX = 'badminton_v2_';
 export const STORAGE_KEYS = {
   // Database key - lưu toàn bộ database JSON
   DATABASE: `${APP_PREFIX}database`,
-  
+
   // Admin authentication keys
   ADMIN_STATUS: `${APP_PREFIX}admin_status`,
   ADMIN_AUTH_TIME: `${APP_PREFIX}admin_auth_time`,
-  
+  ADMIN_TOKEN: `${APP_PREFIX}admin_token`, // Secure token for admin authentication
+
   // Security logs keys
   ADMIN_LOGS: `${APP_PREFIX}admin_logs`,
   SECURITY_LOGS: `${APP_PREFIX}security_logs`,
-  
+
   // App settings cache (nếu cần)
   SETTINGS_CACHE: `${APP_PREFIX}settings_cache`,
-  
+
   // User preferences (nếu cần)
   USER_PREFERENCES: `${APP_PREFIX}user_prefs`,
 } as const;

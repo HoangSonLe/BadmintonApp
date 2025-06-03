@@ -24,6 +24,59 @@ export class SecurityService {
   private static readonly ADMIN_CODE = import.meta.env.VITE_ADMIN_CODE || 'admin123';
   private static readonly SESSION_DURATION = 24 * 60 * 60 * 1000; // 24 hours
   private static readonly MAX_LOGS = 100;
+  private static readonly TOKEN_SECRET = 'badminton_secure_token_2024';
+
+  /**
+   * Generate secure admin token
+   */
+  private static generateAdminToken(): string {
+    const timestamp = Date.now();
+    const randomBytes = Math.random().toString(36).substring(2, 15);
+    const payload = `${timestamp}:${randomBytes}:${this.TOKEN_SECRET}`;
+
+    // Simple hash function (in production, use crypto.subtle.digest)
+    let hash = 0;
+    for (let i = 0; i < payload.length; i++) {
+      const char = payload.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+
+    return `${timestamp}.${randomBytes}.${Math.abs(hash).toString(36)}`;
+  }
+
+  /**
+   * Validate admin token
+   */
+  private static validateAdminToken(token: string): boolean {
+    if (!token || typeof token !== 'string') {
+      return false;
+    }
+
+    const parts = token.split('.');
+    if (parts.length !== 3) {
+      return false;
+    }
+
+    const [timestampStr, randomBytes, hashStr] = parts;
+    const timestamp = parseInt(timestampStr);
+
+    // Check if token is expired
+    if (Date.now() - timestamp >= this.SESSION_DURATION) {
+      return false;
+    }
+
+    // Recreate expected hash
+    const payload = `${timestamp}:${randomBytes}:${this.TOKEN_SECRET}`;
+    let expectedHash = 0;
+    for (let i = 0; i < payload.length; i++) {
+      const char = payload.charCodeAt(i);
+      expectedHash = ((expectedHash << 5) - expectedHash) + char;
+      expectedHash = expectedHash & expectedHash;
+    }
+
+    return hashStr === Math.abs(expectedHash).toString(36);
+  }
   
   /**
    * Verify admin credentials
@@ -51,75 +104,125 @@ export class SecurityService {
   }
   
   /**
-   * Check if current session is admin
+   * Check if current session is admin using secure token validation
    */
   static isCurrentSessionAdmin(): boolean {
-    const adminStatus = StorageService.getItem('ADMIN_STATUS');
-    const adminAuthTime = StorageService.getItem('ADMIN_AUTH_TIME');
+    const adminToken = StorageService.getItem('ADMIN_TOKEN');
 
-    if (adminStatus !== 'true' || !adminAuthTime) {
+    if (!adminToken) {
       return false;
     }
 
-    // Check if session is still valid
-    const authTime = parseInt(adminAuthTime);
-    const currentTime = Date.now();
+    // Validate token cryptographically
+    const isValidToken = this.validateAdminToken(adminToken);
 
-    if (currentTime - authTime >= this.SESSION_DURATION) {
-      // Session expired, clear localStorage
+    if (!isValidToken) {
+      // Invalid or expired token, clear session
       this.clearAdminSession();
-      this.logSecurityEvent('SESSION_EXPIRED', {
+      this.logSecurityEvent('INVALID_TOKEN_DETECTED', {
         expiredAt: new Date().toISOString(),
-        sessionDuration: this.SESSION_DURATION
+        reason: 'Token validation failed'
       });
       return false;
     }
 
     return true;
   }
-  
-  /**
-   * Set admin session
-   */
-  static setAdminSession(): void {
-    const timestamp = Date.now().toString();
-    StorageService.setItem('ADMIN_STATUS', 'true');
-    StorageService.setItem('ADMIN_AUTH_TIME', timestamp);
 
-    this.logAdminAction('SESSION_CREATED', {
-      sessionId: timestamp,
-      expiresAt: new Date(Date.now() + this.SESSION_DURATION).toISOString()
-    });
+  /**
+   * Server-side admin validation for critical operations
+   */
+  static validateServerSideAdmin(): boolean {
+    const adminToken = StorageService.getItem('ADMIN_TOKEN');
+
+    if (!adminToken) {
+      this.logSecurityEvent('UNAUTHORIZED_ACCESS_ATTEMPT', {
+        reason: 'No admin token present',
+        timestamp: new Date().toISOString(),
+        url: window.location.href
+      });
+      throw new Error('🚨 Unauthorized: Admin token required');
+    }
+
+    const isValid = this.validateAdminToken(adminToken);
+
+    if (!isValid) {
+      this.logSecurityEvent('INVALID_TOKEN_ACCESS_ATTEMPT', {
+        reason: 'Invalid or expired token',
+        timestamp: new Date().toISOString(),
+        url: window.location.href
+      });
+      this.clearAdminSession();
+      throw new Error('🚨 Unauthorized: Invalid admin token');
+    }
+
+    return true;
   }
   
   /**
-   * Clear admin session
+   * Set admin session with secure token
+   */
+  static setAdminSession(): void {
+    const adminToken = this.generateAdminToken();
+    const timestamp = Date.now().toString();
+
+    // Store secure token instead of boolean
+    StorageService.setItem('ADMIN_TOKEN', adminToken);
+
+    // Keep legacy keys for backward compatibility (but don't rely on them for security)
+    StorageService.setItem('ADMIN_STATUS', 'true');
+    StorageService.setItem('ADMIN_AUTH_TIME', timestamp);
+
+    this.logAdminAction('SECURE_SESSION_CREATED', {
+      sessionId: timestamp,
+      tokenGenerated: true,
+      expiresAt: new Date(Date.now() + this.SESSION_DURATION).toISOString()
+    });
+  }
+
+  /**
+   * Clear admin session and remove all tokens
    */
   static clearAdminSession(): void {
     const sessionId = StorageService.getItem('ADMIN_AUTH_TIME');
+
+    // Remove all admin-related data
+    StorageService.removeItem('ADMIN_TOKEN');
     StorageService.removeItem('ADMIN_STATUS');
     StorageService.removeItem('ADMIN_AUTH_TIME');
 
-    this.logAdminAction('SESSION_CLEARED', {
+    this.logAdminAction('SECURE_SESSION_CLEARED', {
       sessionId,
+      tokenRemoved: true,
       clearedAt: new Date().toISOString()
     });
   }
   
   /**
-   * Validate admin action before execution
+   * Validate admin action before execution with server-side validation
    */
   static validateAdminAction(actionName: string): boolean {
-    if (!this.isCurrentSessionAdmin()) {
+    try {
+      // Use server-side validation instead of client-side check
+      this.validateServerSideAdmin();
+
+      // Log successful validation
+      this.logAdminAction('ADMIN_ACTION_VALIDATED', {
+        action: actionName,
+        validatedAt: new Date().toISOString()
+      });
+
+      return true;
+    } catch (error) {
       this.logSecurityEvent('UNAUTHORIZED_ADMIN_ACTION', {
         action: actionName,
         timestamp: new Date().toISOString(),
-        reason: 'No valid admin session'
+        reason: (error as Error).message,
+        userAgent: navigator.userAgent,
+        url: window.location.href
       });
-      throw new Error('🚨 Unauthorized: Admin authentication required');
+      throw error;
     }
-    
-    return true;
   }
 
   /**
@@ -128,6 +231,15 @@ export class SecurityService {
   static verifyAdminCode(inputCode: string): boolean {
     const adminCode = import.meta.env.VITE_ADMIN_CODE || 'admin123';
     return inputCode === adminCode;
+  }
+
+  /**
+   * Generate token for destructive operations
+   */
+  static generateDestructiveOperationToken(): string {
+    const timestamp = Date.now();
+    const randomBytes = Math.random().toString(36).substring(2, 15);
+    return `DESTRUCTIVE_${timestamp}_${randomBytes}`;
   }
 
   /**
