@@ -87,26 +87,26 @@ export class DatabaseSecurityService {
   }
   
   /**
-   * Secure wrapper for clearing all data
+   * Secure wrapper for resetting database
    */
-  static async secureClearAllData(): Promise<void> {
+  static async secureResetDatabase(): Promise<void> {
     // Server-side admin validation with extra security
-    SecurityService.validateAdminAction('CLEAR_ALL_DATA');
-    
+    SecurityService.validateAdminAction('RESET_DATABASE');
+
     // Additional confirmation required for destructive operations
     const confirmationToken = SecurityService.generateDestructiveOperationToken();
-    
+
     try {
-      await DatabaseService.clearAllData();
-      
-      SecurityService.logAdminAction('ALL_DATA_CLEARED_SECURELY', {
+      await DatabaseService.resetDatabase();
+
+      SecurityService.logAdminAction('DATABASE_RESET_SECURELY', {
         confirmationToken,
-        clearedAt: new Date().toISOString(),
-        method: 'SECURE_CLEAR_ALL',
+        resetAt: new Date().toISOString(),
+        method: 'SECURE_RESET',
         warning: 'DESTRUCTIVE_OPERATION_COMPLETED'
       });
     } catch (error) {
-      SecurityService.logSecurityEvent('SECURE_CLEAR_ALL_FAILED', {
+      SecurityService.logSecurityEvent('SECURE_RESET_FAILED', {
         error: (error as Error).message,
         timestamp: new Date().toISOString(),
         confirmationToken
