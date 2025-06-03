@@ -56,7 +56,8 @@ const WeeklyRegistration: React.FC<WeeklyRegistrationProps> = ({
     const extraCourts = Math.ceil(extraPlayersCount / settings.playersPerCourt);
     const requiredCourts = settings.courtsCount + extraCourts;
     const totalExtraFee = extraCourts * settings.extraCourtFee;
-    const feePerExtraPlayer = extraPlayersCount > 0 ? totalExtraFee / extraPlayersCount : 0;
+    // Chia phí thêm cho tổng số người đăng ký (thay vì chỉ người vượt quá)
+    const feePerPlayer = totalPlayers > 0 && extraCourts > 0 ? totalExtraFee / totalPlayers : 0;
 
     return {
       totalPlayers,
@@ -66,7 +67,7 @@ const WeeklyRegistration: React.FC<WeeklyRegistrationProps> = ({
       extraCourts,
       extraPlayersCount,
       totalExtraFee,
-      feePerExtraPlayer
+      feePerPlayer
     };
   }, [players.length, settings, existingRegistration]);
 
@@ -303,7 +304,7 @@ const WeeklyRegistration: React.FC<WeeklyRegistrationProps> = ({
                 </span>
                 <br />
                 <span style={{ color: '#ad4e00' }}>
-                  Những người được đánh dấu màu cam sẽ phải trả phí thêm {formatCurrency(registrationSummary.feePerExtraPlayer)}/người
+                  Mỗi người sẽ phải trả phí thêm {formatCurrency(registrationSummary.feePerPlayer)}/người
                 </span>
               </div>
             )}
@@ -365,9 +366,9 @@ const WeeklyRegistration: React.FC<WeeklyRegistrationProps> = ({
                           fontStyle: 'italic'
                         }}>
                           Đăng ký lúc: {formatTime(player.registeredAt)}
-                          {isExtraPlayer && (
+                          {registrationSummary.extraCourts > 0 && (
                             <span style={{ marginLeft: '8px', fontWeight: 'bold' }}>
-                              • Phí thêm: {formatCurrency(registrationSummary.feePerExtraPlayer)}
+                              • Phí thêm: {formatCurrency(registrationSummary.feePerPlayer)}
                             </span>
                           )}
                         </div>
@@ -423,7 +424,7 @@ const WeeklyRegistration: React.FC<WeeklyRegistrationProps> = ({
                       <DollarOutlined /> <strong>Tổng phí thêm:</strong> {formatCurrency(registrationSummary.totalExtraFee)}
                     </p>
                     <p style={{ color: '#f5222d', fontWeight: 'bold', fontSize: '14px' }}>
-                      <strong>Phí/người vượt:</strong> {formatCurrency(registrationSummary.feePerExtraPlayer)}
+                      <strong>Phí/người:</strong> {formatCurrency(registrationSummary.feePerPlayer)}
                     </p>
                   </div>
                 }
