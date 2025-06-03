@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Card, Input, Button, Typography, List, Tag, Space, Alert, message } from 'antd';
+import { Card, Input, Button, Typography, List, Tag, Space, Alert, App } from 'antd';
 import { PlusOutlined, DeleteOutlined, CalendarOutlined, UserOutlined, TrophyOutlined, DollarOutlined, HomeOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import weekOfYear from 'dayjs/plugin/weekOfYear';
@@ -23,6 +23,7 @@ const WeeklyRegistration: React.FC<WeeklyRegistrationProps> = ({
   onRegistrationSubmit,
   isAdmin = false
 }) => {
+  const { message } = App.useApp();
   const [playerName, setPlayerName] = useState<string>('');
   const [players, setPlayers] = useState<Player[]>([]);
 
@@ -99,14 +100,32 @@ const WeeklyRegistration: React.FC<WeeklyRegistrationProps> = ({
 
   const addPlayer = () => {
     if (playerName.trim()) {
+      const trimmedName = playerName.trim();
+
+      // Kiểm tra tên trùng với người đã đăng ký trước đó
+      if (existingRegistration) {
+        const existingPlayerNames = new Set(existingRegistration.players.map(p => p.name.toLowerCase().trim()));
+        if (existingPlayerNames.has(trimmedName.toLowerCase())) {
+          message.warning(`Tên "${trimmedName}" đã được đăng ký cho tuần này rồi!`);
+          return;
+        }
+      }
+
+      // Kiểm tra tên trùng trong danh sách hiện tại
+      const currentPlayerNames = new Set(players.map(p => p.name.toLowerCase().trim()));
+      if (currentPlayerNames.has(trimmedName.toLowerCase())) {
+        message.warning(`Tên "${trimmedName}" đã có trong danh sách hiện tại!`);
+        return;
+      }
+
       const newPlayer: Player = {
         id: Date.now().toString(),
-        name: playerName.trim(),
+        name: trimmedName,
         registeredAt: new Date()
       };
       setPlayers([...players, newPlayer]);
       setPlayerName('');
-      message.success(`Đã thêm ${playerName.trim()}`);
+      message.success(`Đã thêm ${trimmedName}`);
     }
   };
 

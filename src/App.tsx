@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Layout, Tabs, Typography, Space, message, Button } from 'antd';
+import { Layout, Tabs, Typography, Space, message, Button, App as AntApp } from 'antd';
 import { CalendarOutlined, UnorderedListOutlined, SettingOutlined, FileTextOutlined, DatabaseOutlined, LockOutlined, PlayCircleOutlined, PauseCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import type { AppSettings, WeeklyRegistration as WeeklyRegistrationType, RegistrationSummary } from './types';
@@ -216,9 +216,17 @@ function App() {
         const existingPlayerNames = new Set(existingRegistration.players.map(p => p.name.toLowerCase().trim()));
         const newPlayers = registration.players.filter(p => !existingPlayerNames.has(p.name.toLowerCase().trim()));
 
+        // Tìm những tên bị trùng để thông báo cụ thể
+        const duplicateNames = registration.players
+          .filter(p => existingPlayerNames.has(p.name.toLowerCase().trim()))
+          .map(p => p.name);
+
         if (newPlayers.length === 0) {
-          message.warning('Tất cả người chơi đã được đăng ký cho tuần này rồi!');
+          message.warning(`Tất cả người chơi đã được đăng ký cho tuần này rồi! Tên trùng: ${duplicateNames.join(', ')}`);
           return;
+        } else if (duplicateNames.length > 0) {
+          // Có một số tên trùng và một số tên mới
+          message.info(`Tên đã tồn tại: ${duplicateNames.join(', ')}. Chỉ thêm những người chưa đăng ký.`);
         }
 
         // Update existing registration
@@ -497,74 +505,76 @@ function App() {
   };
 
   return (
-    <Layout style={{ minHeight: '100vh' }}>
-      <Header style={{ background: '#fff', padding: '0 24px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
-        <div className="flex items-center justify-between h-full">
-          <Title level={2} style={{ margin: 0, color: '#1890ff' }}>
-            🏸 Quản lý đăng ký cầu lông
-          </Title>
+    <AntApp>
+      <Layout style={{ minHeight: '100vh' }}>
+        <Header style={{ background: '#fff', padding: '0 24px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+          <div className="flex items-center justify-between h-full">
+            <Title level={2} style={{ margin: 0, color: '#1890ff' }}>
+              🏸 Quản lý đăng ký cầu lông
+            </Title>
 
-          {isAdmin && (
-            <Space>
-              <Button
-                type={settings.registrationEnabled ? "default" : "primary"}
-                onClick={handleToggleRegistration}
-                icon={settings.registrationEnabled ? <PauseCircleOutlined /> : <PlayCircleOutlined />}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  fontWeight: '600',
-                  fontSize: '16px',
-                  color: settings.registrationEnabled ? '#ffffff' : '#ffffff',
-                  backgroundColor: settings.registrationEnabled ? '#ff6b6b' : '#006600',
-                  borderColor: settings.registrationEnabled ? '#ff6b6b' : '#006600',
-                  textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8)',
-                  border: 'none'
-                }}
-              >
-                {settings.registrationEnabled ? 'Khóa đăng ký' : 'Mở đăng ký'}
-              </Button>
+            {isAdmin && (
+              <Space>
+                <Button
+                  type={settings.registrationEnabled ? "default" : "primary"}
+                  onClick={handleToggleRegistration}
+                  icon={settings.registrationEnabled ? <PauseCircleOutlined /> : <PlayCircleOutlined />}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontWeight: '600',
+                    fontSize: '16px',
+                    color: settings.registrationEnabled ? '#ffffff' : '#ffffff',
+                    backgroundColor: settings.registrationEnabled ? '#ff6b6b' : '#006600',
+                    borderColor: settings.registrationEnabled ? '#ff6b6b' : '#006600',
+                    textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8)',
+                    border: 'none'
+                  }}
+                >
+                  {settings.registrationEnabled ? 'Khóa đăng ký' : 'Mở đăng ký'}
+                </Button>
 
-              <Button
-                type="text"
-                danger
-                onClick={handleAdminLogout}
-                icon={<LockOutlined />}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  color: '#ff4d4f',
-                  fontWeight: 'bold'
-                }}
-              >
-                Đăng xuất Admin
-              </Button>
-            </Space>
-          )}
-        </div>
-      </Header>
+                <Button
+                  type="text"
+                  danger
+                  onClick={handleAdminLogout}
+                  icon={<LockOutlined />}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    color: '#ff4d4f',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  Đăng xuất Admin
+                </Button>
+              </Space>
+            )}
+          </div>
+        </Header>
 
-      <Content style={{ padding: '24px', background: '#f0f2f5' }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto' }}>
-          <Tabs
-            activeKey={activeTab}
-            onChange={handleTabChange}
-            items={tabItems}
-            size="large"
-            centered
-          />
-        </div>
-      </Content>
+        <Content style={{ padding: '24px', background: '#f0f2f5' }}>
+          <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+            <Tabs
+              activeKey={activeTab}
+              onChange={handleTabChange}
+              items={tabItems}
+              size="large"
+              centered
+            />
+          </div>
+        </Content>
 
-      {/* Admin Authentication Modal */}
-      <AdminAuth
-        visible={showAdminAuth}
-        onSuccess={handleAdminSuccess}
-        onCancel={handleAdminCancel}
-      />
-    </Layout>
+        {/* Admin Authentication Modal */}
+        <AdminAuth
+          visible={showAdminAuth}
+          onSuccess={handleAdminSuccess}
+          onCancel={handleAdminCancel}
+        />
+      </Layout>
+    </AntApp>
   );
 }
 
