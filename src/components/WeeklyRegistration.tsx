@@ -251,7 +251,7 @@ const WeeklyRegistration: React.FC<WeeklyRegistrationProps> = ({
                     />
                   </div>
                   <div style={{
-                    maxHeight: '200px',
+                    maxHeight: '350px',
                     overflowY: 'auto',
                     backgroundColor: '#f9f9f9',
                     padding: '8px',

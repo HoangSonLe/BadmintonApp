@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, Row, Col, Statistic, Alert, Typography, Button, Space } from 'antd';
-import { UserOutlined, HomeOutlined, DollarOutlined, BarChartOutlined, CalendarOutlined, EnvironmentOutlined, ShopOutlined } from '@ant-design/icons';
+import { UserOutlined, HomeOutlined, DollarOutlined, BarChartOutlined, CalendarOutlined, EnvironmentOutlined, ShopOutlined, UpOutlined, DownOutlined } from '@ant-design/icons';
 import type { RegistrationSummary, AppSettings } from '../types';
 
 const { Title } = Typography;
@@ -11,6 +11,8 @@ interface SummaryProps {
 }
 
 const Summary: React.FC<SummaryProps> = ({ summary, settings }) => {
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
@@ -40,64 +42,153 @@ const Summary: React.FC<SummaryProps> = ({ summary, settings }) => {
       <div style={{
         display: 'flex',
         alignItems: 'center',
+        justifyContent: 'space-between',
         marginBottom: '24px',
         gap: '16px'
       }}>
-        <div style={{
-          width: '44px',
-          height: '44px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: 'linear-gradient(135deg, #52c41a 0%, #73d13d 100%)',
-          borderRadius: '12px',
-          color: 'white',
-          fontSize: '22px',
-          boxShadow: '0 4px 12px rgba(82, 196, 26, 0.3)'
-        }}>
-          <BarChartOutlined />
-        </div>
-        <div>
-          <Title level={2} className="mb-0" style={{
-            color: '#52c41a',
-            fontSize: '26px',
-            fontWeight: 600,
-            lineHeight: 1.2,
-            marginTop: '2px',
-            marginBottom: '4px'
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{
+            width: '44px',
+            height: '44px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: 'linear-gradient(135deg, #52c41a 0%, #73d13d 100%)',
+            borderRadius: '12px',
+            color: 'white',
+            fontSize: '22px',
+            boxShadow: '0 4px 12px rgba(82, 196, 26, 0.3)'
           }}>
-            Tổng kết đăng ký
-          </Title>
-          {summary.weekInfo ? (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              color: '#666',
-              fontSize: '14px'
+            <BarChartOutlined />
+          </div>
+          <div>
+            <Title level={2} className="mb-0" style={{
+              color: '#52c41a',
+              fontSize: '26px',
+              fontWeight: 600,
+              lineHeight: 1.2,
+              marginTop: '2px',
+              marginBottom: '4px'
             }}>
-              <CalendarOutlined style={{ color: '#52c41a' }} />
-              <span>
-                Tuần: {formatDateShort(summary.weekInfo.weekStart)} - {formatDateShort(summary.weekInfo.weekEnd)}
-              </span>
-            </div>
-          ) : (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              color: '#999',
-              fontSize: '14px'
-            }}>
-              <CalendarOutlined style={{ color: '#999' }} />
-              <span>Chưa có dữ liệu đăng ký</span>
-            </div>
-          )}
+              Tổng kết đăng ký
+            </Title>
+            {summary.weekInfo ? (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                color: '#666',
+                fontSize: '14px'
+              }}>
+                <CalendarOutlined style={{ color: '#52c41a' }} />
+                <span>
+                  Tuần: {formatDateShort(summary.weekInfo.weekStart)} - {formatDateShort(summary.weekInfo.weekEnd)}
+                </span>
+              </div>
+            ) : (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                color: '#999',
+                fontSize: '14px'
+              }}>
+                <CalendarOutlined style={{ color: '#999' }} />
+                <span>Chưa có dữ liệu đăng ký</span>
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* Collapse/Expand Button */}
+        <Button
+          type="text"
+          icon={isCollapsed ? <DownOutlined /> : <UpOutlined />}
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            color: '#52c41a',
+            fontWeight: 600,
+            fontSize: '14px'
+          }}
+        >
+          {isCollapsed ? 'Mở rộng' : 'Thu gọn'}
+        </Button>
       </div>
 
-      {/* Court Information */}
-      {(settings.courtName || settings.courtAddress) && (
+      {/* Compact Summary when collapsed */}
+      {isCollapsed && (
+        <Row gutter={[8, 8]} style={{ marginBottom: '16px' }}>
+          <Col xs={12} sm={6}>
+            <div style={{
+              textAlign: 'center',
+              padding: '8px',
+              backgroundColor: '#e6f7ff',
+              borderRadius: '6px',
+              border: '1px solid #40a9ff'
+            }}>
+              <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#1890ff' }}>
+                {summary.totalPlayers}
+              </div>
+              <div style={{ fontSize: '12px', color: '#666' }}>người đăng ký</div>
+            </div>
+          </Col>
+          <Col xs={12} sm={6}>
+            <div style={{
+              textAlign: 'center',
+              padding: '8px',
+              backgroundColor: '#f6ffed',
+              borderRadius: '6px',
+              border: '1px solid #52c41a'
+            }}>
+              <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#52c41a' }}>
+                {summary.requiredCourts}
+              </div>
+              <div style={{ fontSize: '12px', color: '#666' }}>sân cần thiết</div>
+            </div>
+          </Col>
+          {summary.extraCourts > 0 && (
+            <>
+              <Col xs={12} sm={6}>
+                <div style={{
+                  textAlign: 'center',
+                  padding: '8px',
+                  backgroundColor: '#fff7e6',
+                  borderRadius: '6px',
+                  border: '1px solid #fa8c16'
+                }}>
+                  <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#fa8c16' }}>
+                    {summary.extraCourts}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#666' }}>sân thêm</div>
+                </div>
+              </Col>
+              <Col xs={12} sm={6}>
+                <div style={{
+                  textAlign: 'center',
+                  padding: '8px',
+                  backgroundColor: '#fff1f0',
+                  borderRadius: '6px',
+                  border: '1px solid #f5222d'
+                }}>
+                  <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#f5222d' }}>
+                    {formatCurrency(summary.feePerExtraPlayer)}
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#666' }}>phí/người</div>
+                </div>
+              </Col>
+            </>
+          )}
+        </Row>
+      )}
+
+      {/* Collapsible Content */}
+      {!isCollapsed && (
+        <>
+          {/* Court Information */}
+          {(settings.courtName || settings.courtAddress) && (
         <Card
           size="small"
           style={{
@@ -313,6 +404,8 @@ const Summary: React.FC<SummaryProps> = ({ summary, settings }) => {
             fontSize: '16px'
           }}
         />
+      )}
+        </>
       )}
     </Card>
   );
