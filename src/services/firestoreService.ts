@@ -9,7 +9,8 @@ import {
   query,
   orderBy,
   Timestamp,
-  writeBatch
+  writeBatch,
+  runTransaction
 } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import type { AppSettings, WeeklyRegistration } from '../types';
@@ -52,6 +53,8 @@ interface FirestoreRegistration {
   weekEnd: Timestamp;
   players: FirestorePlayer[];
   settings: AppSettings;
+  version?: number; // For optimistic locking
+  lastModified?: Timestamp; // Track last modification time
 }
 
 interface FirestoreMetadata {
@@ -194,8 +197,17 @@ export class FirestoreService {
       players: registration.players.map(player => ({
         ...player,
         registeredAt: Timestamp.fromDate(player.registeredAt)
-      }))
+      })),
+      version: 1, // Initialize version for new registrations
+      lastModified: Timestamp.now()
     };
+  }
+
+  /**
+   * Chuyển đổi Date thành Timestamp (public method for external use)
+   */
+  static convertToTimestamp(date: Date): Timestamp {
+    return Timestamp.fromDate(date);
   }
 
   /**
@@ -270,6 +282,145 @@ export class FirestoreService {
       console.error('Error updating registration:', error);
       throw new Error('Không thể cập nhật đăng ký trong Firestore');
     }
+  }
+
+  /**
+   * Safely add players to existing registration using transaction to prevent race conditions
+   */
+  static async addPlayersToRegistration(
+    registrationId: string,
+    newPlayers: FirestorePlayer[],
+    maxRetries: number = 3
+  ): Promise<WeeklyRegistration> {
+    let retryCount = 0;
+
+    while (retryCount < maxRetries) {
+      try {
+        const result = await runTransaction(db, async (transaction) => {
+          const registrationRef = doc(db, COLLECTIONS.REGISTRATIONS, registrationId);
+          const registrationDoc = await transaction.get(registrationRef);
+
+          if (!registrationDoc.exists()) {
+            throw new Error('Registration not found');
+          }
+
+          const currentData = registrationDoc.data() as FirestoreRegistration;
+          const currentPlayers = currentData.players || [];
+
+          // Check for duplicate names (case-insensitive)
+          const existingPlayerNames = new Set(
+            currentPlayers.map(p => p.name.toLowerCase().trim())
+          );
+
+          const playersToAdd = newPlayers.filter(
+            player => !existingPlayerNames.has(player.name.toLowerCase().trim())
+          );
+
+          if (playersToAdd.length === 0) {
+            // Return current data if no new players to add
+            return this.convertFromFirestoreRegistration(currentData);
+          }
+
+          // Create updated registration with new players
+          const updatedData: FirestoreRegistration = {
+            ...currentData,
+            players: [...currentPlayers, ...playersToAdd],
+            version: (currentData.version || 0) + 1,
+            lastModified: Timestamp.now()
+          };
+
+          // Update the document atomically
+          transaction.set(registrationRef, updatedData);
+
+          return this.convertFromFirestoreRegistration(updatedData);
+        });
+
+        // Update metadata after successful transaction
+        await this.updateMetadata();
+        return result;
+
+      } catch (error) {
+        retryCount++;
+        console.warn(`Transaction attempt ${retryCount} failed:`, error);
+
+        if (retryCount >= maxRetries) {
+          console.error('Max retries reached for adding players to registration');
+          throw new Error('Không thể thêm người chơi do xung đột dữ liệu. Vui lòng thử lại.');
+        }
+
+        // Wait before retrying (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 100));
+      }
+    }
+
+    throw new Error('Unexpected error in addPlayersToRegistration');
+  }
+
+  /**
+   * Safely remove a player from existing registration using transaction
+   */
+  static async removePlayerFromRegistration(
+    registrationId: string,
+    playerId: string,
+    maxRetries: number = 3
+  ): Promise<WeeklyRegistration | null> {
+    let retryCount = 0;
+
+    while (retryCount < maxRetries) {
+      try {
+        const result = await runTransaction(db, async (transaction) => {
+          const registrationRef = doc(db, COLLECTIONS.REGISTRATIONS, registrationId);
+          const registrationDoc = await transaction.get(registrationRef);
+
+          if (!registrationDoc.exists()) {
+            throw new Error('Registration not found');
+          }
+
+          const currentData = registrationDoc.data() as FirestoreRegistration;
+          const currentPlayers = currentData.players || [];
+
+          // Remove the player
+          const updatedPlayers = currentPlayers.filter(player => player.id !== playerId);
+
+          if (updatedPlayers.length === 0) {
+            // If no players left, delete the registration
+            transaction.delete(registrationRef);
+            return null;
+          }
+
+          // Create updated registration
+          const updatedData: FirestoreRegistration = {
+            ...currentData,
+            players: updatedPlayers,
+            version: (currentData.version || 0) + 1,
+            lastModified: Timestamp.now()
+          };
+
+          // Update the document atomically
+          transaction.set(registrationRef, updatedData);
+
+          return this.convertFromFirestoreRegistration(updatedData);
+        });
+
+        // Update metadata after successful transaction
+        await this.updateMetadata();
+        return result;
+
+      } catch (error) {
+        retryCount++;
+        console.warn(`Transaction attempt ${retryCount} failed:`, error);
+
+        if (retryCount >= maxRetries) {
+          console.error('Max retries reached for removing player from registration');
+          throw new Error('Không thể xóa người chơi do xung đột dữ liệu. Vui lòng thử lại.');
+        }
+
+        // Wait before retrying (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 100));
+      }
+    }
+
+    throw new Error('Unexpected error in removePlayerFromRegistration');
   }
 
   /**

@@ -234,6 +234,68 @@ export class DatabaseService {
   }
 
   /**
+   * Safely add players to existing registration (prevents race conditions)
+   */
+  static async addPlayersToRegistration(registrationId: string, newPlayers: any[]): Promise<WeeklyRegistration> {
+    try {
+      // Convert players to Firestore format
+      const firestoreePlayers = newPlayers.map(player => ({
+        ...player,
+        registeredAt: FirestoreService.convertToTimestamp ?
+          FirestoreService.convertToTimestamp(player.registeredAt) :
+          player.registeredAt
+      }));
+
+      return await FirestoreService.addPlayersToRegistration(registrationId, firestoreePlayers);
+    } catch (error) {
+      console.error('Error adding players to registration in Firestore, falling back to localStorage:', error);
+      const db = this.readDatabase();
+      const index = db.registrations.findIndex(reg => reg.id === registrationId);
+      if (index !== -1) {
+        // For localStorage fallback, merge players avoiding duplicates
+        const existingPlayerNames = new Set(
+          db.registrations[index].players.map(p => p.name.toLowerCase().trim())
+        );
+        const playersToAdd = newPlayers.filter(
+          player => !existingPlayerNames.has(player.name.toLowerCase().trim())
+        );
+
+        db.registrations[index].players.push(...playersToAdd);
+        this.writeDatabase(db);
+        return db.registrations[index];
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Safely remove player from registration (prevents race conditions)
+   */
+  static async removePlayerFromRegistration(registrationId: string, playerId: string): Promise<WeeklyRegistration | null> {
+    try {
+      return await FirestoreService.removePlayerFromRegistration(registrationId, playerId);
+    } catch (error) {
+      console.error('Error removing player from registration in Firestore, falling back to localStorage:', error);
+      const db = this.readDatabase();
+      const index = db.registrations.findIndex(reg => reg.id === registrationId);
+      if (index !== -1) {
+        db.registrations[index].players = db.registrations[index].players.filter(p => p.id !== playerId);
+
+        if (db.registrations[index].players.length === 0) {
+          // Remove registration if no players left
+          db.registrations.splice(index, 1);
+          this.writeDatabase(db);
+          return null;
+        }
+
+        this.writeDatabase(db);
+        return db.registrations[index];
+      }
+      throw error;
+    }
+  }
+
+  /**
    * Lấy metadata
    */
   static async getMetadata(): Promise<any> {

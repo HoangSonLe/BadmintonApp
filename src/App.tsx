@@ -258,18 +258,13 @@ function App() {
           message.info(`Tên đã tồn tại: ${duplicateNames.join(', ')}. Chỉ thêm những người chưa đăng ký.`);
         }
 
-        // Update existing registration
-        const updatedRegistration: WeeklyRegistrationType = {
-          ...existingRegistration,
-          players: [...existingRegistration.players, ...newPlayers],
-          settings: registration.settings // Use latest settings
-        };
+        // Use transaction-based update to prevent race conditions
+        const updatedRegistration = await DatabaseService.addPlayersToRegistration(
+          existingRegistration.id,
+          newPlayers
+        );
 
-        // Update in database
-        await DatabaseService.deleteRegistration(existingRegistration.id);
-        await DatabaseService.addRegistration(updatedRegistration);
-
-        // Update local state
+        // Update local state with the result from the transaction
         const newRegistrations = registrations.map(reg =>
           reg.id === existingRegistration.id ? updatedRegistration : reg
         );
@@ -357,42 +352,41 @@ function App() {
         return;
       }
 
-      // Remove player from the registration
-      const updatedPlayers = registration.players.filter(player => player.id !== playerId);
+      // Use transaction-based removal to prevent race conditions
+      const updatedRegistration = await DatabaseService.removePlayerFromRegistration(registrationId, playerId);
 
-      if (updatedPlayers.length === 0) {
-        // If no players left, delete the entire registration
-        await handleDeleteRegistration(registrationId);
+      if (updatedRegistration === null) {
+        // Registration was deleted because no players left
+        const newRegistrations = registrations.filter(reg => reg.id !== registrationId);
+        setRegistrations(newRegistrations);
+
+        // Update summary after deletion
+        setCurrentSummary(calculateSummaryFromFirebase(newRegistrations, settings));
+
+        message.success('Đã xóa đăng ký vì không còn người chơi nào!');
         return;
       }
 
-      // Update registration with remaining players
-      const updatedRegistration = {
-        ...registration,
-        players: updatedPlayers
-      };
-
-      // Use secure update method
-      await DatabaseSecurityService.secureUpdateRegistration(registrationId, updatedRegistration);
-
-      // Update local state
+      // Update local state with the result from the transaction
       const newRegistrations = registrations.map(reg =>
         reg.id === registrationId ? updatedRegistration : reg
       );
       setRegistrations(newRegistrations);
 
       // Update summary after deletion
-      setCurrentSummary(calculateSummaryFromFirebase(newRegistrations, settings));
+      if (updatedRegistration) {
+        setCurrentSummary(calculateSummaryFromFirebase(newRegistrations, settings));
+      }
 
       const deletedPlayer = registration.players.find(p => p.id === playerId);
 
       // Log successful player deletion
-      if (deletedPlayer) {
+      if (deletedPlayer && updatedRegistration) {
         RegistrationLogger.logRegistrationUpdated(registrationId, {
           action: 'PLAYER_REMOVED_FROM_REGISTRATION',
           removedPlayer: deletedPlayer.name,
-          remainingPlayersCount: updatedPlayers.length,
-          remainingPlayerNames: updatedPlayers.map(p => p.name)
+          remainingPlayersCount: updatedRegistration.players.length,
+          remainingPlayerNames: updatedRegistration.players.map((p: any) => p.name)
         });
       }
 
