@@ -11,7 +11,7 @@ interface SummaryProps {
 }
 
 const Summary: React.FC<SummaryProps> = ({ summary, settings }) => {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('vi-VN', {
@@ -173,7 +173,7 @@ const Summary: React.FC<SummaryProps> = ({ summary, settings }) => {
                   borderRadius: '6px',
                   border: '1px solid #f5222d'
                 }}>
-                  <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#f5222d' }}>
+                  <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#f5222d' }}>
                     {formatCurrency(summary.feePerExtraPlayer)}
                   </div>
                   <div style={{ fontSize: '12px', color: '#666' }}>phí/người</div>
