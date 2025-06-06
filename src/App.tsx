@@ -71,7 +71,8 @@ function App() {
     const extraCourts = Math.ceil(extraPlayersCount / registration.settings.playersPerCourt);
     const requiredCourts = registration.settings.courtsCount + extraCourts;
     const totalExtraFee = extraCourts * registration.settings.extraCourtFee;
-    const feePerExtraPlayer = extraPlayersCount > 0 ? totalExtraFee / extraPlayersCount : 0;
+    // Chia phí thêm cho tổng số người đăng ký (thay vì chỉ người vượt quá)
+    const feePerExtraPlayer = totalPlayers > 0 && extraCourts > 0 ? totalExtraFee / totalPlayers : 0;
 
     return {
       totalPlayers,
@@ -658,7 +659,7 @@ function App() {
         </Header>
 
         <Content style={{ padding: '24px', background: '#f0f2f5' }}>
-          <div style={{ maxWidth: 1200, margin: '0 auto' }}>
+          <div style={{ maxWidth: 1400, margin: '0 auto' }}>
             <Tabs
               activeKey={activeTab}
               onChange={handleTabChange}

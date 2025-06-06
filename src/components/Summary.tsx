@@ -270,7 +270,7 @@ const Summary: React.FC<SummaryProps> = ({ summary, settings }) => {
           <Col xs={24} md={12}>
             <Card style={{ background: 'linear-gradient(135deg, #fff1f0 0%, #ffccc7 100%)', border: '2px solid #f5222d' }}>
               <Statistic
-                title="Phí/người vượt quá"
+                title="Phí/người"
                 value={summary.feePerExtraPlayer}
                 prefix={<DollarOutlined style={{ color: '#f5222d' }} />}
                 formatter={(value) => formatCurrency(Number(value))}

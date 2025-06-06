@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Card, Input, Button, Typography, List, Tag, Space, Alert, App } from 'antd';
-import { PlusOutlined, DeleteOutlined, CalendarOutlined, UserOutlined, TrophyOutlined, DollarOutlined, HomeOutlined } from '@ant-design/icons';
+import { PlusOutlined, DeleteOutlined, CalendarOutlined, UserOutlined, TrophyOutlined, DollarOutlined, HomeOutlined, SearchOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import weekOfYear from 'dayjs/plugin/weekOfYear';
 import type { WeeklyRegistration as WeeklyRegistrationType, Player, AppSettings } from '../types';
@@ -28,6 +28,7 @@ const WeeklyRegistration: React.FC<WeeklyRegistrationProps> = ({
   const { message } = App.useApp();
   const [playerName, setPlayerName] = useState<string>('');
   const [players, setPlayers] = useState<Player[]>([]);
+  const [existingPlayerSearchTerm, setExistingPlayerSearchTerm] = useState<string>('');
 
   // Tự động lấy tuần tiếp theo (tuần sau tuần hiện tại)
   const nextWeekDates = useMemo(() => {
@@ -84,6 +85,16 @@ const WeeklyRegistration: React.FC<WeeklyRegistrationProps> = ({
       new Date(b.registeredAt).getTime() - new Date(a.registeredAt).getTime()
     );
   }, [players]);
+
+  // Lọc danh sách người đã đăng ký theo từ khóa tìm kiếm
+  const filteredExistingPlayers = useMemo(() => {
+    if (!existingRegistration) return [];
+    if (!existingPlayerSearchTerm.trim()) return existingRegistration.players;
+
+    return existingRegistration.players.filter(player =>
+      player.name.toLowerCase().includes(existingPlayerSearchTerm.toLowerCase().trim())
+    );
+  }, [existingRegistration, existingPlayerSearchTerm]);
 
   const addPlayer = () => {
     // Check if registration is disabled
@@ -227,27 +238,71 @@ const WeeklyRegistration: React.FC<WeeklyRegistrationProps> = ({
               message={`Đã có ${existingRegistration.players.length} người đăng ký cho tuần này`}
               description={
                 <div style={{ marginTop: '8px' }}>
-                  <p style={{ marginBottom: '8px', fontWeight: 'bold' }}>Danh sách đã đăng ký:</p>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <p style={{ marginBottom: '0', fontWeight: 'bold' }}>Danh sách đã đăng ký:</p>
+                    <Input
+                      placeholder="Tìm kiếm người chơi..."
+                      prefix={<SearchOutlined />}
+                      value={existingPlayerSearchTerm}
+                      onChange={(e) => setExistingPlayerSearchTerm(e.target.value)}
+                      style={{ width: '200px' }}
+                      size="small"
+                      allowClear
+                    />
+                  </div>
                   <div style={{
-                    maxHeight: '120px',
+                    maxHeight: '200px',
                     overflowY: 'auto',
                     backgroundColor: '#f9f9f9',
                     padding: '8px',
                     borderRadius: '6px'
                   }}>
-                    {existingRegistration.players.map((existingPlayer, index) => (
-                      <div key={existingPlayer.id} style={{
-                        padding: '4px 0',
-                        borderBottom: index < existingRegistration.players.length - 1 ? '1px solid #e8e8e8' : 'none',
-                        fontSize: '13px'
+                    {filteredExistingPlayers.length > 0 ? (
+                      filteredExistingPlayers.map((existingPlayer, index) => {
+                        // Tìm index gốc trong danh sách chưa lọc
+                        const originalIndex = existingRegistration.players.findIndex(p => p.id === existingPlayer.id);
+                        return (
+                          <div key={existingPlayer.id} style={{
+                            padding: '6px 0',
+                            borderBottom: index < filteredExistingPlayers.length - 1 ? '1px solid #e8e8e8' : 'none',
+                            fontSize: '14px'
+                          }}>
+                            <span style={{ fontWeight: 'bold' }}>{originalIndex + 1}. {existingPlayer.name}</span>
+                            <span style={{ color: '#666', marginLeft: '8px', fontSize: '12px' }}>
+                              ({formatTime(existingPlayer.registeredAt)})
+                            </span>
+                          </div>
+                        );
+                      })
+                    ) : existingPlayerSearchTerm.trim() ? (
+                      <div style={{
+                        textAlign: 'center',
+                        color: '#999',
+                        fontStyle: 'italic',
+                        padding: '16px 0'
                       }}>
-                        <span style={{ fontWeight: 'bold' }}>{index + 1}. {existingPlayer.name}</span>
-                        <span style={{ color: '#666', marginLeft: '8px', fontSize: '12px' }}>
-                          ({formatTime(existingPlayer.registeredAt)})
-                        </span>
+                        Không tìm thấy người chơi nào với từ khóa "{existingPlayerSearchTerm}"
                       </div>
-                    ))}
+                    ) : (
+                      <div style={{
+                        textAlign: 'center',
+                        color: '#999',
+                        fontStyle: 'italic',
+                        padding: '16px 0'
+                      }}>
+                        Chưa có người nào đăng ký
+                      </div>
+                    )}
                   </div>
+                  {existingPlayerSearchTerm.trim() && (
+                    <div style={{
+                      marginTop: '4px',
+                      fontSize: '12px',
+                      color: '#666'
+                    }}>
+                      Hiển thị {filteredExistingPlayers.length} / {existingRegistration.players.length} người chơi
+                    </div>
+                  )}
                 </div>
               }
               type="info"
@@ -350,7 +405,7 @@ const WeeklyRegistration: React.FC<WeeklyRegistrationProps> = ({
               bordered
               dataSource={sortedPlayers}
               style={{
-                maxHeight: 200,
+                maxHeight: 350,
                 overflowY: 'auto',
                 overflowX: 'hidden'
               }}
@@ -364,11 +419,11 @@ const WeeklyRegistration: React.FC<WeeklyRegistrationProps> = ({
 
                 return (
                   <List.Item style={{
-                    padding: '8px 12px',
+                    padding: '12px 16px',
                     backgroundColor: isExtraPlayer ? '#fff2e8' : 'transparent',
                     border: isExtraPlayer ? '1px solid #ff7a45' : 'none',
                     borderRadius: isExtraPlayer ? '6px' : '0',
-                    margin: isExtraPlayer ? '2px 0' : '0'
+                    margin: isExtraPlayer ? '3px 0' : '1px 0'
                   }}>
                     <div style={{
                       display: 'flex',
@@ -403,11 +458,6 @@ const WeeklyRegistration: React.FC<WeeklyRegistrationProps> = ({
                           fontStyle: 'italic'
                         }}>
                           Đăng ký lúc: {formatTime(player.registeredAt)}
-                          {registrationSummary.extraCourts > 0 && (
-                            <span style={{ marginLeft: '8px', fontWeight: 'bold' }}>
-                              • Phí thêm: {formatCurrency(registrationSummary.feePerPlayer)}
-                            </span>
-                          )}
                         </div>
                       </div>
                       <Button

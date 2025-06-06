@@ -75,7 +75,8 @@ const RegistrationList: React.FC<RegistrationListProps> = ({
     const extraCourts = Math.ceil(extraPlayersCount / registration.settings.playersPerCourt);
     const requiredCourts = registration.settings.courtsCount + extraCourts;
     const totalExtraFee = extraCourts * registration.settings.extraCourtFee;
-    const feePerExtraPlayer = extraPlayersCount > 0 ? totalExtraFee / extraPlayersCount : 0;
+    // Chia phí thêm cho tổng số người đăng ký (thay vì chỉ người vượt quá)
+    const feePerExtraPlayer = totalPlayers > 0 && extraCourts > 0 ? totalExtraFee / totalPlayers : 0;
 
     return {
       totalPlayers,
@@ -249,36 +250,53 @@ const RegistrationList: React.FC<RegistrationListProps> = ({
   const renderOverallStats = () => (
     <Card size="small" style={{ marginBottom: '16px' }}>
       <Row gutter={16}>
-        <Col xs={12} sm={6}>
+        <Col xs={12} sm={6} lg={4}>
           <Statistic
             title="Tổng đăng ký"
             value={overallStats.totalRegistrations}
             prefix={<BarChartOutlined />}
-            valueStyle={{ fontSize: '18px', color: '#1890ff' }}
+            valueStyle={{ fontSize: '18px', color: '#1890ff', fontWeight: 600 }}
           />
         </Col>
-        <Col xs={12} sm={6}>
+        <Col xs={12} sm={6} lg={4}>
           <Statistic
             title="Tổng người chơi"
             value={overallStats.totalPlayers}
             prefix={<UserOutlined />}
-            valueStyle={{ fontSize: '18px', color: '#52c41a' }}
+            valueStyle={{ fontSize: '18px', color: '#52c41a', fontWeight: 600 }}
           />
         </Col>
-        <Col xs={12} sm={6}>
+        <Col xs={12} sm={6} lg={4}>
           <Statistic
             title="TB người/tuần"
             value={overallStats.averagePlayersPerWeek}
             prefix={<UserOutlined />}
-            valueStyle={{ fontSize: '18px', color: '#722ed1' }}
+            valueStyle={{ fontSize: '18px', color: '#722ed1', fontWeight: 600 }}
           />
         </Col>
-        <Col xs={12} sm={6}>
+        <Col xs={12} sm={6} lg={4}>
           <Statistic
             title="Tổng phí thêm"
             value={formatCurrency(overallStats.totalExtraFee)}
             prefix={<DollarOutlined />}
-            valueStyle={{ fontSize: '16px', color: '#f5222d' }}
+            valueStyle={{ fontSize: '16px', color: '#f5222d', fontWeight: 600 }}
+          />
+        </Col>
+        <Col xs={12} sm={6} lg={4}>
+          <Statistic
+            title="Tổng sân thêm"
+            value={overallStats.totalExtraCourts}
+            prefix={<HomeOutlined />}
+            suffix="sân"
+            valueStyle={{ fontSize: '18px', color: '#fa8c16', fontWeight: 600 }}
+          />
+        </Col>
+        <Col xs={12} sm={6} lg={4}>
+          <Statistic
+            title="TB phí/tuần"
+            value={formatCurrency(overallStats.totalRegistrations > 0 ? overallStats.totalExtraFee / overallStats.totalRegistrations : 0)}
+            prefix={<DollarOutlined />}
+            valueStyle={{ fontSize: '16px', color: '#722ed1', fontWeight: 600 }}
           />
         </Col>
       </Row>
@@ -360,7 +378,7 @@ const RegistrationList: React.FC<RegistrationListProps> = ({
             lineHeight: 1.2,
             marginTop: '2px'
           }}>
-            Danh sách đăng ký theo tuần
+            Danh sách đăng ký chi tiết theo tuần
           </Title>
         </div>
 
@@ -432,16 +450,33 @@ const RegistrationList: React.FC<RegistrationListProps> = ({
 
                     <div className="mb-4" style={{ paddingRight: isAdmin ? '80px' : '16px' }}>
                       <Title level={4} className="mb-1">
-                        Tuần {formatDate(registration.weekStart)} - {formatDate(registration.weekEnd)}
+                        🏸 Tuần {formatDate(registration.weekStart)} - {formatDate(registration.weekEnd)}
                       </Title>
-                      <Tag color="blue" icon={<UserOutlined />}>
-                        {registration.players.length} người đăng ký
-                      </Tag>
+                      <Space wrap>
+                        <Tag color="blue" icon={<UserOutlined />}>
+                          {registration.players.length} người đăng ký
+                        </Tag>
+                        <Tag color={summary.extraCourts > 0 ? "orange" : "green"} icon={<HomeOutlined />}>
+                          {summary.requiredCourts} sân cần thiết
+                        </Tag>
+                        {summary.extraCourts > 0 && (
+                          <Tag color="red" icon={<DollarOutlined />}>
+                            Phí thêm: {formatCurrency(summary.totalExtraFee)}
+                          </Tag>
+                        )}
+                        {summary.extraCourts === 0 && (
+                          <Tag color="green">
+                            ✅ Không cần thuê thêm sân
+                          </Tag>
+                        )}
+                      </Space>
                     </div>
 
                     <Row gutter={[16, 16]}>
-                      <Col xs={24} md={12}>
-                        <Title level={5}>Danh sách người chơi:</Title>
+                      <Col xs={24} lg={14} xl={16}>
+                        <Title level={5}>
+                          👥 Danh sách người chơi ({registration.players.length} người):
+                        </Title>
 
                         {/* Ô tìm kiếm người chơi */}
                         <Input
@@ -457,12 +492,13 @@ const RegistrationList: React.FC<RegistrationListProps> = ({
                         />
 
                         <div style={{
-                          maxHeight: 150,
+                          maxHeight: 250,
                           overflowY: 'auto',
                           overflowX: 'hidden',
                           border: '1px solid #f0f0f0',
                           borderRadius: '6px',
-                          padding: '8px'
+                          padding: '8px',
+                          backgroundColor: '#fafafa'
                         }}>
                           {(() => {
                             // Lọc và sắp xếp người chơi theo thời gian đăng ký (mới nhất trước)
@@ -577,18 +613,15 @@ const RegistrationList: React.FC<RegistrationListProps> = ({
                                   <div style={{
                                     fontSize: '11px',
                                     color: isExtraPlayer ? '#ad4e00' : '#999',
-                                    fontStyle: 'italic'
+                                    fontStyle: 'italic',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    gap: '1px'
                                   }}>
-                                    Đăng ký: {formatTime(player.registeredAt)}
-                                    {isExtraPlayer && (
-                                      <span style={{
-                                        marginLeft: '6px',
-                                        fontWeight: 'bold',
-                                        color: '#d4380d'
-                                      }}>
-                                        • Phí: {formatCurrency(summary.feePerExtraPlayer)}
-                                      </span>
-                                    )}
+                                    <div>
+                                      📅 {formatDate(player.registeredAt)} • ⏰ {formatTime(player.registeredAt)}
+                                    </div>
+
                                   </div>
                                 </div>
                               );
@@ -630,7 +663,7 @@ const RegistrationList: React.FC<RegistrationListProps> = ({
                                   border: '1px solid #ff7a45',
                                   borderRadius: '2px'
                                 }}></div>
-                                <span style={{ color: '#d4380d' }}>Người vượt quá (phải trả phí thêm)</span>
+                                <span style={{ color: '#d4380d' }}>Người vượt quá sức chứa sân</span>
                               </div>
                               {playerSearchTerm && (
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -649,28 +682,28 @@ const RegistrationList: React.FC<RegistrationListProps> = ({
                         )}
                       </Col>
 
-                      <Col xs={24} md={12}>
-                        <Title level={5}>Thống kê:</Title>
+                      <Col xs={24} lg={10} xl={8}>
+                        <Title level={5}>Thống kê chi tiết:</Title>
                         <Row gutter={[8, 8]}>
-                          <Col span={12}>
+                          <Col span={8}>
                             <Statistic
                               title="Tổng số người"
                               value={summary.totalPlayers}
                               prefix={<UserOutlined />}
                               suffix="người"
-                              valueStyle={{ fontSize: '16px' }}
+                              valueStyle={{ fontSize: '16px', fontWeight: 600 }}
                             />
                           </Col>
-                          <Col span={12}>
+                          <Col span={8}>
                             <Statistic
                               title="Sân mặc định"
                               value={registration.settings.courtsCount}
                               prefix={<HomeOutlined />}
                               suffix="sân"
-                              valueStyle={{ fontSize: '16px', color: '#0ea5e9' }}
+                              valueStyle={{ fontSize: '16px', color: '#0ea5e9', fontWeight: 600 }}
                             />
                             <div style={{
-                              fontSize: '11px',
+                              fontSize: '10px',
                               color: '#666',
                               marginTop: '2px',
                               textAlign: 'center'
@@ -678,41 +711,68 @@ const RegistrationList: React.FC<RegistrationListProps> = ({
                               Sức chứa: {registration.settings.courtsCount * registration.settings.playersPerCourt} người
                             </div>
                           </Col>
-                          <Col span={12}>
+                          <Col span={8}>
                             <Statistic
-                              title="Số sân cần thiết"
+                              title="Người/sân"
+                              value={registration.settings.playersPerCourt}
+                              prefix={<UserOutlined />}
+                              suffix="người"
+                              valueStyle={{ fontSize: '16px', color: '#722ed1', fontWeight: 600 }}
+                            />
+                          </Col>
+                          <Col span={8}>
+                            <Statistic
+                              title="Sân cần thiết"
                               value={summary.requiredCourts}
                               prefix={<HomeOutlined />}
                               suffix="sân"
-                              valueStyle={{ fontSize: '16px' }}
+                              valueStyle={{ fontSize: '16px', fontWeight: 600 }}
                             />
                           </Col>
 
                           {summary.extraCourts > 0 && (
                             <>
-                              <Col span={12}>
+                              <Col span={8}>
                                 <Statistic
                                   title="Sân thêm"
                                   value={summary.extraCourts}
                                   prefix={<HomeOutlined />}
                                   suffix="sân"
-                                  valueStyle={{ fontSize: '16px', color: '#fa8c16' }}
+                                  valueStyle={{ fontSize: '16px', color: '#fa8c16', fontWeight: 600 }}
                                 />
                               </Col>
-                              <Col span={12}>
+                              <Col span={8}>
                                 <Statistic
-                                  title="Phí thêm"
+                                  title="Phí thêm tổng"
                                   value={formatCurrency(summary.totalExtraFee)}
                                   prefix={<DollarOutlined />}
-                                  valueStyle={{ fontSize: '14px', color: '#f5222d' }}
+                                  valueStyle={{ fontSize: '14px', color: '#f5222d', fontWeight: 600 }}
                                 />
                               </Col>
-                              <Col span={12}>
+                              <Col span={8}>
                                 <Statistic
-                                  title="Phí/người vượt"
+                                  title="Phí/người"
                                   value={formatCurrency(summary.feePerExtraPlayer)}
                                   prefix={<DollarOutlined />}
-                                  valueStyle={{ fontSize: '14px', color: '#f5222d' }}
+                                  valueStyle={{ fontSize: '14px', color: '#f5222d', fontWeight: 600 }}
+                                />
+                              </Col>
+                              <Col span={8}>
+                                <Statistic
+                                  title="Người vượt quá"
+                                  value={summary.extraPlayersCount}
+                                  prefix={<UserOutlined />}
+                                  suffix="người"
+                                  valueStyle={{ fontSize: '16px', color: '#fa8c16', fontWeight: 600 }}
+                                />
+                              </Col>
+                              <Col span={8}>
+                                <Statistic
+                                  title="Phí sân thêm"
+                                  value={formatCurrency(registration.settings.extraCourtFee)}
+                                  prefix={<DollarOutlined />}
+                                  suffix="/sân"
+                                  valueStyle={{ fontSize: '14px', color: '#666', fontWeight: 600 }}
                                 />
                               </Col>
                             </>
